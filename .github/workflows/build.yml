@@ -44,6 +44,9 @@ jobs:
         with:
           args: --target aarch64-apple-darwin
 
+      - name: Re-sign app bundle for distribution
+        run: codesign --force --deep --sign - src-tauri/target/aarch64-apple-darwin/release/bundle/macos/NoteDesk.app
+
       - name: Upload .dmg artifact
         uses: actions/upload-artifact@v4
         with:
@@ -55,5 +58,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NoteDesk-macOS-arm64-app
-          path: src-tauri/target/aarch64-apple-darwin/release/bundle/macos/NoteDesk.app.tar.gz
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/macos/NoteDesk.app
           if-no-files-found: error

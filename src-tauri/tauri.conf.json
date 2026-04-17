@@ -35,12 +35,5 @@
       "icons/icon.ico"
     ]
   },
-  "plugins": {
-    "fs": {
-      "scope": {
-        "allow": ["**"],
-        "deny": []
-      }
-    }
-  }
+  "plugins": {}
 }
