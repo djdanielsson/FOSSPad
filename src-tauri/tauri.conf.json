@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/nicegui/tauri-v2/main/tauri.conf.schema.json",
   "productName": "NoteDesk",
   "version": "0.1.0",
-  "identifier": "com.notedesk.app",
+  "identifier": "com.notedesk.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",

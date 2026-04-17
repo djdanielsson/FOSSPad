@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-macos:
-    runs-on: macos-14  # Apple Silicon (M1+) runner
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
@@ -28,12 +28,13 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri
+          workspaces: './src-tauri -> target'
 
       - name: Install npm dependencies
         run: npm ci
 
       - name: Build Tauri app
+        id: build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,8 +44,13 @@ jobs:
       - name: Upload .dmg artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NoteDesk-macOS-arm64
-          path: |
-            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
+          name: NoteDesk-macOS-arm64-dmg
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/NoteDesk_*.dmg
+          if-no-files-found: error
+
+      - name: Upload .app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NoteDesk-macOS-arm64-app
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/macos/NoteDesk.app.tar.gz
           if-no-files-found: error
