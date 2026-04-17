@@ -1,0 +1,99 @@
+.welcome-screen {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f3ff 0%, #e8e6ff 50%, #f3f2f1 100%);
+}
+
+.welcome-card {
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  padding: 48px;
+  box-shadow: var(--shadow-lg);
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+}
+
+.welcome-logo {
+  margin-bottom: 16px;
+}
+
+.welcome-card h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.welcome-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 28px;
+  font-size: var(--font-size-lg);
+}
+
+.welcome-input-group {
+  text-align: left;
+  margin-bottom: 24px;
+}
+
+.welcome-input-group label {
+  display: block;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.welcome-input-row {
+  display: flex;
+  gap: 8px;
+}
+.welcome-input-row .modal-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.welcome-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.welcome-recent {
+  text-align: left;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 16px;
+}
+.welcome-recent h4 {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+.recent-item:hover {
+  background: var(--bg-hover);
+}
+.recent-item svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}

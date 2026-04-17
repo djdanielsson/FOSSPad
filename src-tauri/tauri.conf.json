@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegui/tauri-v2/main/tauri.conf.schema.json",
+  "productName": "NoteDesk",
+  "version": "0.1.0",
+  "identifier": "com.notedesk.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "NoteDesk",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "fs": {
+      "scope": {
+        "allow": ["**"],
+        "deny": []
+      }
+    }
+  }
+}
