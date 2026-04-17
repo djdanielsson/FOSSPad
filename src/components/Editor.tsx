@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useWorkspace } from "../hooks/useWorkspace";
 import RenderedBlock from "./RenderedBlock";
+import TagEditor from "./TagEditor";
 import "./Editor.css";
+
+function slugify(name: string): string {
+  return name.split("").map(c => (/[a-zA-Z0-9\-_]/.test(c) ? c : "-")).join("").toLowerCase();
+}
 
 interface Block {
   id: string;
@@ -115,7 +120,7 @@ function parseBlocks(markdown: string): Block[] {
 }
 
 export default function Editor() {
-  const { content, setContent, active, loading, dirty, activeNotebook } = useWorkspace();
+  const { content, setContent, active, loading, dirty, workspace } = useWorkspace();
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -210,6 +215,14 @@ export default function Editor() {
     <div className="editor-container">
       <div className="editor-toolbar">
         <span className="editor-page-title">{active.page.name}</span>
+        {workspace && active.notebook && active.section && active.page && (
+          <TagEditor
+            workspacePath={workspace.path}
+            notebook={slugify(active.notebook)}
+            section={active.section}
+            filename={active.page.filename}
+          />
+        )}
         <div className="editor-toolbar-right">
           {dirty && <span className="save-indicator">Saving...</span>}
           {!dirty && <span className="save-indicator saved">Saved</span>}
