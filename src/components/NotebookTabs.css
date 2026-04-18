@@ -96,6 +96,8 @@
   font-size: var(--font-size-base);
   outline: none;
   margin-bottom: 12px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 .modal-input:focus {
   border-color: var(--accent);

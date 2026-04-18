@@ -37,15 +37,33 @@ function darkenHex(hex: string, amount: number): string {
   return `#${[r, g, b].map(x => x.toString(16).padStart(2, "0")).join("")}`;
 }
 
+function luminance(hex: string): number {
+  const p = parseHex(hex);
+  if (!p) return 0.5;
+  return (0.299 * p.r + 0.587 * p.g + 0.114 * p.b) / 255;
+}
+
 function applyTheme(theme: ThemeSettings): void {
   const root = document.documentElement.style;
+  const allVars = [
+    "--bg-primary", "--bg-secondary", "--bg-tertiary",
+    "--bg-hover", "--bg-active",
+    "--text-primary", "--text-secondary", "--text-muted",
+    "--border-color", "--border-subtle",
+    "--accent", "--accent-hover", "--accent-light",
+  ] as const;
+
+  const hasValues = theme.bg_primary || theme.bg_secondary || theme.bg_tertiary
+    || theme.text_primary || theme.text_secondary || theme.accent;
+
+  if (!hasValues) {
+    allVars.forEach(k => root.removeProperty(k));
+    return;
+  }
+
   const keys: (keyof ThemeSettings)[] = [
-    "bg_primary",
-    "bg_secondary",
-    "bg_tertiary",
-    "text_primary",
-    "text_secondary",
-    "accent",
+    "bg_primary", "bg_secondary", "bg_tertiary",
+    "text_primary", "text_secondary", "accent",
   ];
   for (const key of keys) {
     const value = theme[key];
@@ -56,9 +74,34 @@ function applyTheme(theme: ThemeSettings): void {
       root.removeProperty(cssName);
     }
   }
+
+  const isDark = theme.bg_primary ? luminance(theme.bg_primary) < 0.45 : false;
+
+  if (theme.bg_primary) {
+    if (isDark) {
+      root.setProperty("--bg-hover", mixHex(theme.bg_primary, "#ffffff", 0.08));
+      root.setProperty("--bg-active", mixHex(theme.bg_primary, "#ffffff", 0.16));
+      root.setProperty("--border-color", mixHex(theme.bg_primary, "#ffffff", 0.14));
+      root.setProperty("--border-subtle", mixHex(theme.bg_primary, "#ffffff", 0.08));
+    } else {
+      root.setProperty("--bg-hover", darkenHex(theme.bg_primary, 0.04));
+      root.setProperty("--bg-active", darkenHex(theme.bg_primary, 0.12));
+      root.setProperty("--border-color", darkenHex(theme.bg_primary, 0.08));
+      root.setProperty("--border-subtle", darkenHex(theme.bg_primary, 0.04));
+    }
+  }
+
+  if (theme.text_primary) {
+    root.setProperty("--text-muted", mixHex(theme.text_primary, theme.bg_primary ?? "#1a1a1a", 0.5));
+  }
+
   if (theme.accent) {
     root.setProperty("--accent-hover", darkenHex(theme.accent, 0.12));
-    root.setProperty("--accent-light", mixHex(theme.accent, "#ffffff", 0.88));
+    if (isDark) {
+      root.setProperty("--accent-light", mixHex(theme.accent, theme.bg_primary ?? "#1e1e2e", 0.75));
+    } else {
+      root.setProperty("--accent-light", mixHex(theme.accent, "#ffffff", 0.88));
+    }
   } else {
     root.removeProperty("--accent-hover");
     root.removeProperty("--accent-light");

@@ -1,5 +1,9 @@
+use aes_gcm::aead::{Aead, OsRng};
+use aes_gcm::{AeadCore, Aes256Gcm, KeyInit};
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value as YamlValue;
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -78,12 +82,103 @@ pub struct GitSettings {
     pub auto_push_enabled: bool,
     pub auto_push_interval_minutes: u32,
     pub remote_url: Option<String>,
+    #[serde(default)]
+    pub ssh_key_path: Option<String>,
+    #[serde(default)]
+    pub gpg_key_path: Option<String>,
+    #[serde(default)]
+    pub auth_method: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Settings {
     pub theme: ThemeSettings,
     pub git: GitSettings,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct EncryptedCredentials {
+    pub salt: String,
+    pub nonce: String,
+    pub ciphertext: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct GitCredentials {
+    pub username: Option<EncryptedCredentials>,
+    pub token: Option<EncryptedCredentials>,
+}
+
+fn derive_key(salt: &[u8]) -> [u8; 32] {
+    let user = std::env::var("USER")
+        .or_else(|_| std::env::var("USERNAME"))
+        .unwrap_or_default();
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_default();
+    let mut hasher = Sha256::new();
+    hasher.update(b"notedesk-credential-key-v1");
+    hasher.update(user.as_bytes());
+    hasher.update(home.as_bytes());
+    hasher.update(salt);
+    hasher.finalize().into()
+}
+
+fn encrypt_value(plaintext: &str) -> Result<EncryptedCredentials, String> {
+    use rand::RngCore;
+    let b64 = base64::engine::general_purpose::STANDARD;
+    let mut salt = [0u8; 16];
+    rand::thread_rng().fill_bytes(&mut salt);
+    let key_bytes = derive_key(&salt);
+    let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes);
+    let cipher = Aes256Gcm::new(key);
+    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+    let ciphertext = cipher
+        .encrypt(&nonce, plaintext.as_bytes())
+        .map_err(|e| format!("encryption failed: {e}"))?;
+    Ok(EncryptedCredentials {
+        salt: b64.encode(salt),
+        nonce: b64.encode(nonce),
+        ciphertext: b64.encode(ciphertext),
+    })
+}
+
+fn decrypt_value(enc: &EncryptedCredentials) -> Result<String, String> {
+    let b64 = base64::engine::general_purpose::STANDARD;
+    let salt = b64.decode(&enc.salt).map_err(|e| e.to_string())?;
+    let nonce_bytes = b64.decode(&enc.nonce).map_err(|e| e.to_string())?;
+    let ct = b64.decode(&enc.ciphertext).map_err(|e| e.to_string())?;
+    let key_bytes = derive_key(&salt);
+    let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes);
+    let cipher = Aes256Gcm::new(key);
+    let nonce = aes_gcm::Nonce::from_slice(&nonce_bytes);
+    let plaintext = cipher
+        .decrypt(nonce, ct.as_ref())
+        .map_err(|e| format!("decryption failed: {e}"))?;
+    String::from_utf8(plaintext).map_err(|e| e.to_string())
+}
+
+fn credentials_path(workspace_path: &str) -> PathBuf {
+    PathBuf::from(workspace_path).join(".notedesk").join("credentials.json")
+}
+
+fn load_credentials(workspace_path: &str) -> GitCredentials {
+    let path = credentials_path(workspace_path);
+    if !path.exists() {
+        return GitCredentials::default();
+    }
+    let Ok(content) = fs::read_to_string(&path) else {
+        return GitCredentials::default();
+    };
+    serde_json::from_str(&content).unwrap_or_default()
+}
+
+fn save_credentials(workspace_path: &str, creds: &GitCredentials) -> Result<(), String> {
+    let dir = PathBuf::from(workspace_path).join(".notedesk");
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let path = dir.join("credentials.json");
+    let json = serde_json::to_string_pretty(creds).map_err(|e| e.to_string())?;
+    fs::write(&path, json).map_err(|e| e.to_string())
 }
 
 fn default_settings() -> Settings {
@@ -100,6 +195,9 @@ fn default_settings() -> Settings {
             auto_push_enabled: false,
             auto_push_interval_minutes: 60,
             remote_url: None,
+            ssh_key_path: None,
+            gpg_key_path: None,
+            auth_method: None,
         },
     }
 }
@@ -625,32 +723,63 @@ fn git_status(workspace_path: String) -> Result<GitStatus, String> {
 #[tauri::command]
 fn git_commit_and_push(workspace_path: String, message: String) -> Result<String, String> {
     let root = Path::new(&workspace_path);
+    let settings = {
+        let path = settings_path(&workspace_path);
+        if path.exists() {
+            let content = fs::read_to_string(&path).unwrap_or_default();
+            serde_json::from_str::<Settings>(&content).unwrap_or_else(|_| default_settings())
+        } else {
+            default_settings()
+        }
+    };
+
     git_output_success(root, &["add", "-A"])?;
     let commit_msg = if message.is_empty() {
         "Update"
     } else {
         &message
     };
-    let commit_out = Command::new("git")
-        .current_dir(root)
-        .args(["commit", "-m", commit_msg])
-        .output()
-        .map_err(|e| format!("failed to run git commit: {e}"))?;
+
+    let mut commit_cmd = Command::new("git");
+    commit_cmd.current_dir(root).args(["commit", "-m", commit_msg]);
+    if let Some(ref gpg_path) = settings.git.gpg_key_path {
+        if !gpg_path.is_empty() {
+            commit_cmd.args(["-S"]);
+            commit_cmd.env("GNUPGHOME", gpg_path);
+        }
+    }
+    let commit_out = commit_cmd.output().map_err(|e| format!("failed to run git commit: {e}"))?;
     let c_out = String::from_utf8_lossy(&commit_out.stdout);
     let c_err = String::from_utf8_lossy(&commit_out.stderr);
     if !commit_out.status.success() {
         let msg = format!("{}{}", c_out, c_err);
-        if msg.contains("nothing to commit") {
-            // still try push
-        } else {
+        if !msg.contains("nothing to commit") {
             return Err(msg.trim().to_string());
         }
     }
-    let push_out = Command::new("git")
-        .current_dir(root)
-        .args(["push"])
-        .output()
-        .map_err(|e| format!("failed to run git push: {e}"))?;
+
+    let mut push_cmd = Command::new("git");
+    push_cmd.current_dir(root).args(["push"]);
+    for (k, v) in git_env_for_settings(&workspace_path, &settings) {
+        push_cmd.env(k, v);
+    }
+    if settings.git.auth_method.as_deref() == Some("token") {
+        let remote_out = Command::new("git")
+            .current_dir(root)
+            .args(["remote", "get-url", "origin"])
+            .output()
+            .ok();
+        if let Some(ref ro) = remote_out {
+            if ro.status.success() {
+                let url = String::from_utf8_lossy(&ro.stdout).trim().to_string();
+                let auth_url = maybe_inject_token_in_url(&url, &workspace_path);
+                if auth_url != url {
+                    push_cmd.args(["--repo", &auth_url]);
+                }
+            }
+        }
+    }
+    let push_out = push_cmd.output().map_err(|e| format!("failed to run git push: {e}"))?;
     let p_out = String::from_utf8_lossy(&push_out.stdout);
     let p_err = String::from_utf8_lossy(&push_out.stderr);
     if !push_out.status.success() {
@@ -663,11 +792,22 @@ fn git_commit_and_push(workspace_path: String, message: String) -> Result<String
 #[tauri::command]
 fn git_pull(workspace_path: String) -> Result<String, String> {
     let root = Path::new(&workspace_path);
-    let out = Command::new("git")
-        .current_dir(root)
-        .args(["pull"])
-        .output()
-        .map_err(|e| format!("failed to run git pull: {e}"))?;
+    let settings = {
+        let path = settings_path(&workspace_path);
+        if path.exists() {
+            let content = fs::read_to_string(&path).unwrap_or_default();
+            serde_json::from_str::<Settings>(&content).unwrap_or_else(|_| default_settings())
+        } else {
+            default_settings()
+        }
+    };
+
+    let mut cmd = Command::new("git");
+    cmd.current_dir(root).args(["pull"]);
+    for (k, v) in git_env_for_settings(&workspace_path, &settings) {
+        cmd.env(k, v);
+    }
+    let out = cmd.output().map_err(|e| format!("failed to run git pull: {e}"))?;
     let stdout = String::from_utf8_lossy(&out.stdout);
     let stderr = String::from_utf8_lossy(&out.stderr);
     if !out.status.success() {
@@ -714,6 +854,79 @@ fn git_clone(url: String, workspace_path: String) -> Result<String, String> {
         return Err(format!("{}{}", stdout, stderr).trim().to_string());
     }
     Ok(format!("{}{}", stdout, stderr).trim().to_string())
+}
+
+#[tauri::command]
+fn save_git_credentials(workspace_path: String, username: Option<String>, token: Option<String>) -> Result<(), String> {
+    let mut creds = load_credentials(&workspace_path);
+    if let Some(ref u) = username {
+        if !u.is_empty() {
+            creds.username = Some(encrypt_value(u)?);
+        }
+    }
+    if let Some(ref t) = token {
+        if !t.is_empty() {
+            creds.token = Some(encrypt_value(t)?);
+        }
+    }
+    save_credentials(&workspace_path, &creds)
+}
+
+#[tauri::command]
+fn load_git_credentials(workspace_path: String) -> Result<(bool, bool), String> {
+    let creds = load_credentials(&workspace_path);
+    Ok((creds.username.is_some(), creds.token.is_some()))
+}
+
+#[tauri::command]
+fn clear_git_credentials(workspace_path: String) -> Result<(), String> {
+    save_credentials(&workspace_path, &GitCredentials::default())
+}
+
+fn git_env_for_settings(workspace_path: &str, settings: &Settings) -> Vec<(String, String)> {
+    let mut env = Vec::new();
+    if let Some(ref ssh_path) = settings.git.ssh_key_path {
+        if !ssh_path.is_empty() {
+            env.push((
+                "GIT_SSH_COMMAND".to_string(),
+                format!("ssh -i {} -o IdentitiesOnly=yes", ssh_path),
+            ));
+        }
+    }
+    if let Some(ref gpg_path) = settings.git.gpg_key_path {
+        if !gpg_path.is_empty() {
+            env.push(("GNUPGHOME".to_string(), gpg_path.clone()));
+        }
+    }
+    if let Some(ref method) = settings.git.auth_method {
+        if method == "token" {
+            let creds = load_credentials(workspace_path);
+            if let Some(ref enc_user) = creds.username {
+                if let Ok(u) = decrypt_value(enc_user) {
+                    env.push(("GIT_AUTHOR_NAME".to_string(), u));
+                }
+            }
+            if let Some(ref enc_token) = creds.token {
+                if let Ok(t) = decrypt_value(enc_token) {
+                    env.push(("GIT_ASKPASS".to_string(), String::new()));
+                    env.push(("GIT_TOKEN_FOR_NOTEDESK".to_string(), t));
+                }
+            }
+        }
+    }
+    env
+}
+
+fn maybe_inject_token_in_url(url: &str, workspace_path: &str) -> String {
+    let creds = load_credentials(workspace_path);
+    let username = creds.username.as_ref().and_then(|e| decrypt_value(e).ok());
+    let token = creds.token.as_ref().and_then(|e| decrypt_value(e).ok());
+    if let (Some(user), Some(tok)) = (username, token) {
+        if url.starts_with("https://") {
+            return url.replacen("https://", &format!("https://{}:{}@", user, tok), 1);
+        }
+    }
+    url.to_string()
 }
 
 #[tauri::command]
@@ -764,6 +977,9 @@ pub fn run() {
             git_clone,
             load_settings,
             save_settings,
+            save_git_credentials,
+            load_git_credentials,
+            clear_git_credentials,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

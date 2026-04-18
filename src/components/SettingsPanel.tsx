@@ -109,22 +109,27 @@ function normalizeColorInput(raw: string): string | null {
   return null;
 }
 
+function luminance(hex: string): number {
+  const p = parseHex(hex);
+  if (!p) return 0.5;
+  return (0.299 * p.r + 0.587 * p.g + 0.114 * p.b) / 255;
+}
+
 function applyThemeToDocument(theme: ThemeSettings): void {
   const root = document.documentElement.style;
-  const keys = [
-    "--bg-primary",
-    "--bg-secondary",
-    "--bg-tertiary",
-    "--text-primary",
-    "--text-secondary",
-    "--accent",
-    "--accent-hover",
-    "--accent-light",
+  const allVars = [
+    "--bg-primary", "--bg-secondary", "--bg-tertiary",
+    "--bg-hover", "--bg-active",
+    "--text-primary", "--text-secondary", "--text-muted",
+    "--border-color", "--border-subtle",
+    "--accent", "--accent-hover", "--accent-light",
   ] as const;
+
   if (isThemeEmpty(theme)) {
-    keys.forEach(k => root.removeProperty(k));
+    allVars.forEach(k => root.removeProperty(k));
     return;
   }
+
   const r = resolveTheme(theme);
   root.setProperty("--bg-primary", r.bg_primary);
   root.setProperty("--bg-secondary", r.bg_secondary);
@@ -133,7 +138,24 @@ function applyThemeToDocument(theme: ThemeSettings): void {
   root.setProperty("--text-secondary", r.text_secondary);
   root.setProperty("--accent", r.accent);
   root.setProperty("--accent-hover", darkenHex(r.accent, 0.12));
-  root.setProperty("--accent-light", mixHex(r.accent, "#ffffff", 0.88));
+
+  const isDark = luminance(r.bg_primary) < 0.45;
+
+  if (isDark) {
+    root.setProperty("--bg-hover", mixHex(r.bg_primary, "#ffffff", 0.08));
+    root.setProperty("--bg-active", mixHex(r.bg_primary, "#ffffff", 0.16));
+    root.setProperty("--border-color", mixHex(r.bg_primary, "#ffffff", 0.14));
+    root.setProperty("--border-subtle", mixHex(r.bg_primary, "#ffffff", 0.08));
+    root.setProperty("--accent-light", mixHex(r.accent, r.bg_primary, 0.75));
+  } else {
+    root.setProperty("--bg-hover", darkenHex(r.bg_primary, 0.04));
+    root.setProperty("--bg-active", darkenHex(r.bg_primary, 0.12));
+    root.setProperty("--border-color", darkenHex(r.bg_primary, 0.08));
+    root.setProperty("--border-subtle", darkenHex(r.bg_primary, 0.04));
+    root.setProperty("--accent-light", mixHex(r.accent, "#ffffff", 0.88));
+  }
+
+  root.setProperty("--text-muted", mixHex(r.text_primary, r.bg_primary, 0.5));
 }
 
 export interface SettingsPanelProps {
@@ -159,6 +181,12 @@ export default function SettingsPanel({
   const [gitMessage, setGitMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [gitBusy, setGitBusy] = useState(false);
   const [themeInputDraft, setThemeInputDraft] = useState<Partial<Record<keyof ThemeSettings, string>>>({});
+  const [sshKeyDraft, setSshKeyDraft] = useState("");
+  const [gpgKeyDraft, setGpgKeyDraft] = useState("");
+  const [credUserDraft, setCredUserDraft] = useState("");
+  const [credTokenDraft, setCredTokenDraft] = useState("");
+  const [hasStoredUser, setHasStoredUser] = useState(false);
+  const [hasStoredToken, setHasStoredToken] = useState(false);
 
   const resolved = useMemo(() => resolveTheme(settings.theme), [settings.theme]);
 
@@ -189,10 +217,18 @@ export default function SettingsPanel({
   useEffect(() => {
     if (!open) return;
     setRemoteDraft(settings.git.remote_url ?? "");
+    setSshKeyDraft(settings.git.ssh_key_path ?? "");
+    setGpgKeyDraft(settings.git.gpg_key_path ?? "");
+    setCredUserDraft("");
+    setCredTokenDraft("");
     setGitMessage(null);
     setThemeInputDraft({});
     refreshGitStatus();
-  }, [open, workspacePath, settings.git.remote_url, refreshGitStatus]);
+    void api.loadGitCredentials(workspacePath).then(([hasU, hasT]) => {
+      setHasStoredUser(hasU);
+      setHasStoredToken(hasT);
+    });
+  }, [open, workspacePath, settings.git.remote_url, settings.git.ssh_key_path, settings.git.gpg_key_path, refreshGitStatus]);
 
   useEffect(() => {
     if (!open) return;
@@ -254,6 +290,54 @@ export default function SettingsPanel({
         setGitMessage({ kind: "ok", text: "Remote URL saved to settings." });
       }
       applyThemeToDocument(next.theme);
+    } catch (e) {
+      setGitMessage({ kind: "err", text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setGitBusy(false);
+    }
+  };
+
+  const saveSshKey = async () => {
+    await updateGitSettings({ ssh_key_path: sshKeyDraft.trim() || undefined });
+    setGitMessage({ kind: "ok", text: "SSH key path saved." });
+  };
+
+  const saveGpgKey = async () => {
+    await updateGitSettings({ gpg_key_path: gpgKeyDraft.trim() || undefined });
+    setGitMessage({ kind: "ok", text: "GPG key path saved." });
+  };
+
+  const saveCredentials = async () => {
+    setGitBusy(true);
+    setGitMessage(null);
+    try {
+      await api.saveGitCredentials(
+        workspacePath,
+        credUserDraft.trim() || null,
+        credTokenDraft.trim() || null,
+      );
+      await updateGitSettings({ auth_method: "token" });
+      setCredUserDraft("");
+      setCredTokenDraft("");
+      const [hasU, hasT] = await api.loadGitCredentials(workspacePath);
+      setHasStoredUser(hasU);
+      setHasStoredToken(hasT);
+      setGitMessage({ kind: "ok", text: "Credentials saved (encrypted)." });
+    } catch (e) {
+      setGitMessage({ kind: "err", text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setGitBusy(false);
+    }
+  };
+
+  const clearCredentials = async () => {
+    setGitBusy(true);
+    try {
+      await api.clearGitCredentials(workspacePath);
+      await updateGitSettings({ auth_method: undefined });
+      setHasStoredUser(false);
+      setHasStoredToken(false);
+      setGitMessage({ kind: "ok", text: "Credentials cleared." });
     } catch (e) {
       setGitMessage({ kind: "err", text: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -558,6 +642,98 @@ export default function SettingsPanel({
                     </button>
                     <button type="button" className="btn btn-secondary" disabled={gitBusy} onClick={handleInit}>
                       Init repository
+                    </button>
+                  </div>
+
+                  <div className="settings-section-head settings-section-head-spaced">
+                    <h3 className="settings-section-title">Authentication</h3>
+                    <p className="settings-section-desc">
+                      Set credentials for private repos. Username &amp; token are stored encrypted—never in plain text.
+                    </p>
+                  </div>
+
+                  <label className="settings-field-label">Auth method</label>
+                  <select
+                    className="modal-input settings-select"
+                    value={settings.git.auth_method ?? "ssh"}
+                    onChange={e => updateGitSettings({ auth_method: e.target.value || undefined })}
+                  >
+                    <option value="ssh">SSH key</option>
+                    <option value="token">Username / token (HTTPS)</option>
+                  </select>
+
+                  {settings.git.auth_method === "token" && (
+                    <div className="settings-cred-block">
+                      <label className="settings-field-label">
+                        Username {hasStoredUser && <span className="settings-cred-badge">saved</span>}
+                      </label>
+                      <input
+                        type="text"
+                        className="modal-input"
+                        placeholder={hasStoredUser ? "(stored — enter new value to replace)" : "GitHub username"}
+                        value={credUserDraft}
+                        onChange={e => setCredUserDraft(e.target.value)}
+                      />
+                      <label className="settings-field-label">
+                        Token / password {hasStoredToken && <span className="settings-cred-badge">saved</span>}
+                      </label>
+                      <input
+                        type="password"
+                        className="modal-input"
+                        placeholder={hasStoredToken ? "(stored — enter new value to replace)" : "Personal access token"}
+                        value={credTokenDraft}
+                        onChange={e => setCredTokenDraft(e.target.value)}
+                        autoComplete="off"
+                      />
+                      <div className="settings-git-actions">
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          disabled={gitBusy || (!credUserDraft.trim() && !credTokenDraft.trim())}
+                          onClick={saveCredentials}
+                        >
+                          Save credentials
+                        </button>
+                        {(hasStoredUser || hasStoredToken) && (
+                          <button type="button" className="btn btn-danger" disabled={gitBusy} onClick={clearCredentials}>
+                            Clear stored
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="settings-section-head settings-section-head-spaced">
+                    <h3 className="settings-section-title">SSH key</h3>
+                    <p className="settings-section-desc">Path to your private key (used with SSH remotes).</p>
+                  </div>
+                  <div className="settings-inline">
+                    <input
+                      type="text"
+                      className="modal-input"
+                      placeholder="~/.ssh/id_ed25519"
+                      value={sshKeyDraft}
+                      onChange={e => setSshKeyDraft(e.target.value)}
+                    />
+                    <button type="button" className="btn btn-primary" disabled={gitBusy} onClick={saveSshKey}>
+                      Save
+                    </button>
+                  </div>
+
+                  <div className="settings-section-head settings-section-head-spaced">
+                    <h3 className="settings-section-title">GPG key</h3>
+                    <p className="settings-section-desc">Path to GPG home directory for signed commits.</p>
+                  </div>
+                  <div className="settings-inline">
+                    <input
+                      type="text"
+                      className="modal-input"
+                      placeholder="~/.gnupg"
+                      value={gpgKeyDraft}
+                      onChange={e => setGpgKeyDraft(e.target.value)}
+                    />
+                    <button type="button" className="btn btn-primary" disabled={gitBusy} onClick={saveGpgKey}>
+                      Save
                     </button>
                   </div>
                 </>

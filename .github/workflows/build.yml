@@ -45,7 +45,7 @@ jobs:
           args: --target aarch64-apple-darwin
 
       - name: Re-sign app bundle for distribution
-        run: codesign --force --deep --sign - src-tauri/target/aarch64-apple-darwin/release/bundle/macos/NoteDesk.app
+        run: codesign --force --deep --sign - --entitlements src-tauri/Entitlements.plist src-tauri/target/aarch64-apple-darwin/release/bundle/macos/NoteDesk.app
 
       - name: Upload .dmg artifact
         uses: actions/upload-artifact@v4
@@ -59,58 +59,6 @@ jobs:
         with:
           name: NoteDesk-macOS-arm64-app
           path: src-tauri/target/aarch64-apple-darwin/release/bundle/macos/NoteDesk.app
-          if-no-files-found: error
-
-  build-macos-x64:
-    runs-on: macos-13
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install Rust (stable)
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-apple-darwin
-
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: "./src-tauri -> target"
-
-      - name: Install npm dependencies
-        run: npm ci
-
-      - name: Generate app icons
-        run: npx tauri icon app-icon.png
-
-      - name: Build Tauri app
-        id: build
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: --target x86_64-apple-darwin
-
-      - name: Re-sign app bundle for distribution
-        run: codesign --force --deep --sign - src-tauri/target/x86_64-apple-darwin/release/bundle/macos/NoteDesk.app
-
-      - name: Upload .dmg artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: NoteDesk-macOS-x64-dmg
-          path: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/NoteDesk_*.dmg
-          if-no-files-found: error
-
-      - name: Upload .app artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: NoteDesk-macOS-x64-app
-          path: src-tauri/target/x86_64-apple-darwin/release/bundle/macos/NoteDesk.app
           if-no-files-found: error
 
   build-linux-x64:

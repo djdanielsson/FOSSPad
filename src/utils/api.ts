@@ -174,6 +174,9 @@ export interface GitSettings {
   auto_push_enabled: boolean;
   auto_push_interval_minutes: number;
   remote_url?: string;
+  ssh_key_path?: string;
+  gpg_key_path?: string;
+  auth_method?: string;
 }
 
 export interface Settings {
@@ -187,4 +190,22 @@ export async function loadSettings(workspacePath: string): Promise<Settings> {
 
 export async function saveSettings(workspacePath: string, settings: Settings): Promise<void> {
   return invoke("save_settings", { workspacePath, settings });
+}
+
+export async function saveGitCredentials(
+  workspacePath: string,
+  username: string | null,
+  token: string | null,
+): Promise<void> {
+  return invoke("save_git_credentials", { workspacePath, username, token });
+}
+
+export async function loadGitCredentials(
+  workspacePath: string,
+): Promise<[boolean, boolean]> {
+  return invoke("load_git_credentials", { workspacePath });
+}
+
+export async function clearGitCredentials(workspacePath: string): Promise<void> {
+  return invoke("clear_git_credentials", { workspacePath });
 }

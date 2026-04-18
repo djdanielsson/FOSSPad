@@ -67,6 +67,7 @@
   font-size: var(--font-size-sm);
   outline: none;
   background: var(--bg-primary);
+  color: var(--text-primary);
 }
 .page-list-search:focus {
   border-color: var(--accent);
@@ -130,6 +131,8 @@
   border-radius: var(--radius-sm);
   font-size: var(--font-size-base);
   outline: none;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .page-list-empty {
