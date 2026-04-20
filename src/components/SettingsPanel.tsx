@@ -644,100 +644,100 @@ export default function SettingsPanel({
                       Init repository
                     </button>
                   </div>
-
-                  <div className="settings-section-head settings-section-head-spaced">
-                    <h3 className="settings-section-title">Authentication</h3>
-                    <p className="settings-section-desc">
-                      Set credentials for private repos. Username &amp; token are stored encrypted—never in plain text.
-                    </p>
-                  </div>
-
-                  <label className="settings-field-label">Auth method</label>
-                  <select
-                    className="modal-input settings-select"
-                    value={settings.git.auth_method ?? "ssh"}
-                    onChange={e => updateGitSettings({ auth_method: e.target.value || undefined })}
-                  >
-                    <option value="ssh">SSH key</option>
-                    <option value="token">Username / token (HTTPS)</option>
-                  </select>
-
-                  {settings.git.auth_method === "token" && (
-                    <div className="settings-cred-block">
-                      <label className="settings-field-label">
-                        Username {hasStoredUser && <span className="settings-cred-badge">saved</span>}
-                      </label>
-                      <input
-                        type="text"
-                        className="modal-input"
-                        placeholder={hasStoredUser ? "(stored — enter new value to replace)" : "GitHub username"}
-                        value={credUserDraft}
-                        onChange={e => setCredUserDraft(e.target.value)}
-                      />
-                      <label className="settings-field-label">
-                        Token / password {hasStoredToken && <span className="settings-cred-badge">saved</span>}
-                      </label>
-                      <input
-                        type="password"
-                        className="modal-input"
-                        placeholder={hasStoredToken ? "(stored — enter new value to replace)" : "Personal access token"}
-                        value={credTokenDraft}
-                        onChange={e => setCredTokenDraft(e.target.value)}
-                        autoComplete="off"
-                      />
-                      <div className="settings-git-actions">
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          disabled={gitBusy || (!credUserDraft.trim() && !credTokenDraft.trim())}
-                          onClick={saveCredentials}
-                        >
-                          Save credentials
-                        </button>
-                        {(hasStoredUser || hasStoredToken) && (
-                          <button type="button" className="btn btn-danger" disabled={gitBusy} onClick={clearCredentials}>
-                            Clear stored
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="settings-section-head settings-section-head-spaced">
-                    <h3 className="settings-section-title">SSH key</h3>
-                    <p className="settings-section-desc">Path to your private key (used with SSH remotes).</p>
-                  </div>
-                  <div className="settings-inline">
-                    <input
-                      type="text"
-                      className="modal-input"
-                      placeholder="~/.ssh/id_ed25519"
-                      value={sshKeyDraft}
-                      onChange={e => setSshKeyDraft(e.target.value)}
-                    />
-                    <button type="button" className="btn btn-primary" disabled={gitBusy} onClick={saveSshKey}>
-                      Save
-                    </button>
-                  </div>
-
-                  <div className="settings-section-head settings-section-head-spaced">
-                    <h3 className="settings-section-title">GPG key</h3>
-                    <p className="settings-section-desc">Path to GPG home directory for signed commits.</p>
-                  </div>
-                  <div className="settings-inline">
-                    <input
-                      type="text"
-                      className="modal-input"
-                      placeholder="~/.gnupg"
-                      value={gpgKeyDraft}
-                      onChange={e => setGpgKeyDraft(e.target.value)}
-                    />
-                    <button type="button" className="btn btn-primary" disabled={gitBusy} onClick={saveGpgKey}>
-                      Save
-                    </button>
-                  </div>
                 </>
               )}
+
+              <div className="settings-section-head settings-section-head-spaced">
+                <h3 className="settings-section-title">Authentication</h3>
+                <p className="settings-section-desc">
+                  Set credentials for private repos. Username &amp; token are stored encrypted—never in plain text.
+                </p>
+              </div>
+
+              <label className="settings-field-label">Auth method</label>
+              <select
+                className="modal-input settings-select"
+                value={settings.git.auth_method ?? "ssh"}
+                onChange={e => updateGitSettings({ auth_method: e.target.value || undefined })}
+              >
+                <option value="ssh">SSH key</option>
+                <option value="token">Username / token (HTTPS)</option>
+              </select>
+
+              {settings.git.auth_method === "token" && (
+                <div className="settings-cred-block">
+                  <label className="settings-field-label">
+                    Username {hasStoredUser && <span className="settings-cred-badge">saved</span>}
+                  </label>
+                  <input
+                    type="text"
+                    className="modal-input"
+                    placeholder={hasStoredUser ? "(stored — enter new value to replace)" : "GitHub username"}
+                    value={credUserDraft}
+                    onChange={e => setCredUserDraft(e.target.value)}
+                  />
+                  <label className="settings-field-label">
+                    Token / password {hasStoredToken && <span className="settings-cred-badge">saved</span>}
+                  </label>
+                  <input
+                    type="password"
+                    className="modal-input"
+                    placeholder={hasStoredToken ? "(stored — enter new value to replace)" : "Personal access token"}
+                    value={credTokenDraft}
+                    onChange={e => setCredTokenDraft(e.target.value)}
+                    autoComplete="off"
+                  />
+                  <div className="settings-git-actions">
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={gitBusy || (!credUserDraft.trim() && !credTokenDraft.trim())}
+                      onClick={saveCredentials}
+                    >
+                      Save credentials
+                    </button>
+                    {(hasStoredUser || hasStoredToken) && (
+                      <button type="button" className="btn btn-danger" disabled={gitBusy} onClick={clearCredentials}>
+                        Clear stored
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="settings-section-head settings-section-head-spaced">
+                <h3 className="settings-section-title">SSH key</h3>
+                <p className="settings-section-desc">Path to your private key (used with SSH remotes).</p>
+              </div>
+              <div className="settings-inline">
+                <input
+                  type="text"
+                  className="modal-input"
+                  placeholder="~/.ssh/id_ed25519"
+                  value={sshKeyDraft}
+                  onChange={e => setSshKeyDraft(e.target.value)}
+                />
+                <button type="button" className="btn btn-primary" disabled={gitBusy} onClick={saveSshKey}>
+                  Save
+                </button>
+              </div>
+
+              <div className="settings-section-head settings-section-head-spaced">
+                <h3 className="settings-section-title">GPG key</h3>
+                <p className="settings-section-desc">Path to GPG home directory for signed commits.</p>
+              </div>
+              <div className="settings-inline">
+                <input
+                  type="text"
+                  className="modal-input"
+                  placeholder="~/.gnupg"
+                  value={gpgKeyDraft}
+                  onChange={e => setGpgKeyDraft(e.target.value)}
+                />
+                <button type="button" className="btn btn-primary" disabled={gitBusy} onClick={saveGpgKey}>
+                  Save
+                </button>
+              </div>
             </div>
           )}
         </div>

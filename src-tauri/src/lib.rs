@@ -214,8 +214,21 @@ fn slugify(name: &str) -> String {
 }
 
 #[tauri::command]
+fn expand_tilde(raw: String) -> Result<String, String> {
+    let trimmed = raw.trim();
+    if !trimmed.starts_with('~') {
+        return Ok(trimmed.to_string());
+    }
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .map_err(|_| "Cannot determine home directory".to_string())?;
+    Ok(trimmed.replacen('~', &home, 1))
+}
+
+#[tauri::command]
 fn load_workspace(workspace_path: String) -> Result<Workspace, String> {
-    let root = Path::new(&workspace_path);
+    let expanded = expand_tilde(workspace_path)?;
+    let root = Path::new(&expanded);
     if !root.exists() {
         fs::create_dir_all(root).map_err(|e| e.to_string())?;
     }
@@ -225,7 +238,13 @@ fn load_workspace(workspace_path: String) -> Result<Workspace, String> {
     let mut entries: Vec<_> = fs::read_dir(root)
         .map_err(|e| e.to_string())?
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().is_dir())
+        .filter(|e| {
+            if !e.path().is_dir() {
+                return false;
+            }
+            let name = e.file_name().to_string_lossy().to_string();
+            !name.starts_with('.')
+        })
         .collect();
     entries.sort_by_key(|e| e.file_name());
 
@@ -292,7 +311,7 @@ fn load_workspace(workspace_path: String) -> Result<Workspace, String> {
     }
 
     Ok(Workspace {
-        path: workspace_path,
+        path: expanded,
         notebooks,
     })
 }
@@ -421,6 +440,10 @@ fn walk_markdown_files(root: &Path, out: &mut Vec<PathBuf>) -> Result<(), String
     for entry in entries.filter_map(|e| e.ok()) {
         let path = entry.path();
         if path.is_dir() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with('.') {
+                continue;
+            }
             walk_markdown_files(&path, out)?;
         } else if path.extension().map_or(false, |e| e == "md") {
             out.push(path);
@@ -954,6 +977,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
+            expand_tilde,
             load_workspace,
             read_page,
             save_page,

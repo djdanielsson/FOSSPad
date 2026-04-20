@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Workspace } from "../types";
 
+export async function expandTilde(raw: string): Promise<string> {
+  return invoke("expand_tilde", { raw });
+}
+
 export async function loadWorkspace(workspacePath: string): Promise<Workspace> {
   return invoke("load_workspace", { workspacePath });
 }

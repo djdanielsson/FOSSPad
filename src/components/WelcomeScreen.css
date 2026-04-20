@@ -49,6 +49,38 @@
   letter-spacing: 0.5px;
 }
 
+.welcome-browse-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0;
+}
+
+.welcome-browse-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  font-size: var(--font-size-base);
+  width: 100%;
+  justify-content: center;
+}
+
+.welcome-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+.welcome-divider::before,
+.welcome-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
 .welcome-input-row {
   display: flex;
   gap: 8px;
@@ -56,6 +88,12 @@
 .welcome-input-row .modal-input {
   flex: 1;
   margin-bottom: 0;
+}
+
+.welcome-error {
+  color: #d83b01;
+  font-size: var(--font-size-sm);
+  margin-top: 6px;
 }
 
 .welcome-hint {

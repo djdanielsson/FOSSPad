@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useWorkspace } from "../hooks/useWorkspace";
+import * as api from "../utils/api";
 import "./WelcomeScreen.css";
 
 export default function WelcomeScreen() {
   const { setWorkspacePath } = useWorkspace();
   const [path, setPath] = useState("");
+  const [error, setError] = useState("");
   const [recentPaths] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem("notedesk-recent");
@@ -12,14 +15,36 @@ export default function WelcomeScreen() {
     } catch { return []; }
   });
 
-  const handleOpen = (p: string) => {
+  const handleOpen = async (p: string) => {
     if (!p.trim()) return;
-    const trimmed = p.trim();
+    setError("");
     try {
-      const recent = [trimmed, ...recentPaths.filter(r => r !== trimmed)].slice(0, 5);
-      localStorage.setItem("notedesk-recent", JSON.stringify(recent));
-    } catch {}
-    setWorkspacePath(trimmed);
+      const expanded = await api.expandTilde(p.trim());
+      try {
+        const recent = [expanded, ...recentPaths.filter(r => r !== expanded)].slice(0, 5);
+        localStorage.setItem("notedesk-recent", JSON.stringify(recent));
+      } catch {}
+      setWorkspacePath(expanded);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleBrowse = async () => {
+    setError("");
+    try {
+      const selected = await open({ directory: true, multiple: false, title: "Choose workspace folder" });
+      if (selected && typeof selected === "string") {
+        setPath(selected);
+        try {
+          const recent = [selected, ...recentPaths.filter(r => r !== selected)].slice(0, 5);
+          localStorage.setItem("notedesk-recent", JSON.stringify(recent));
+        } catch {}
+        setWorkspacePath(selected);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   return (
@@ -44,6 +69,17 @@ export default function WelcomeScreen() {
 
         <div className="welcome-input-group">
           <label>Open a workspace folder</label>
+          <div className="welcome-browse-row">
+            <button className="btn btn-primary welcome-browse-btn" onClick={handleBrowse}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M2 3.5A1.5 1.5 0 013.5 2h3.379a1.5 1.5 0 011.06.44l.622.62a1.5 1.5 0 001.06.44H12.5A1.5 1.5 0 0114 5v7.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9z" stroke="currentColor" strokeWidth="1.2"/>
+              </svg>
+              Browse for folder
+            </button>
+          </div>
+          <div className="welcome-divider">
+            <span>or type a path</span>
+          </div>
           <div className="welcome-input-row">
             <input
               type="text"
@@ -53,10 +89,11 @@ export default function WelcomeScreen() {
               onKeyDown={e => e.key === "Enter" && handleOpen(path)}
               className="modal-input"
             />
-            <button className="btn btn-primary" onClick={() => handleOpen(path)}>
+            <button className="btn btn-secondary" onClick={() => handleOpen(path)}>
               Open
             </button>
           </div>
+          {error && <p className="welcome-error">{error}</p>}
           <p className="welcome-hint">
             This folder will contain your notebook directories with Markdown files.
             Perfect for committing to a Git repository.

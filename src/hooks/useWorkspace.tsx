@@ -44,9 +44,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setWorkspace(ws);
   }, []);
 
-  const setWorkspacePath = useCallback((path: string) => {
-    wsPathRef.current = path;
-    refresh();
+  const setWorkspacePath = useCallback(async (path: string) => {
+    try {
+      const ws = await api.loadWorkspace(path);
+      wsPathRef.current = ws.path;
+      setWorkspace(ws);
+    } catch {
+      wsPathRef.current = path;
+      refresh();
+    }
   }, [refresh]);
 
   const saveCurrentPage = useCallback(async () => {

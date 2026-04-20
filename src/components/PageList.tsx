@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useWorkspace } from "../hooks/useWorkspace";
 import type { PageInfo } from "../types";
 import "./PageList.css";
@@ -23,6 +24,24 @@ export default function PageList() {
       </div>
     );
   }
+
+  const handleImport = async () => {
+    try {
+      const selected = await open({
+        multiple: true,
+        title: "Import Markdown files",
+        filters: [{ name: "Markdown", extensions: ["md", "markdown", "txt"] }],
+      });
+      if (!selected) return;
+      const paths = Array.isArray(selected) ? selected : [selected];
+      const stringPaths = paths.filter((p): p is string => typeof p === "string");
+      if (stringPaths.length > 0) {
+        await importFiles(stringPaths);
+      }
+    } catch {
+      // user cancelled
+    }
+  };
 
   const filteredPages = activeSection.pages.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -60,6 +79,12 @@ export default function PageList() {
         <h3 className="page-list-title" style={{ color: activeNotebook.color }}>
           {active.section}
         </h3>
+        <button className="page-list-add" onClick={handleImport} title="Import files">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2 3.5A1.5 1.5 0 013.5 2h3.379a1.5 1.5 0 011.06.44l.622.62a1.5 1.5 0 001.06.44H12.5A1.5 1.5 0 0114 5v7.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9z" stroke="currentColor" strokeWidth="1.2"/>
+            <path d="M8 7v4M6 9h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+        </button>
         <button className="page-list-add" onClick={() => setShowNew(true)} title="New Page">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
