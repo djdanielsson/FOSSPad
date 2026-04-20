@@ -1,3 +1,4 @@
+use aes_gcm::aead::rand_core::RngCore;
 use aes_gcm::aead::{Aead, OsRng};
 use aes_gcm::{AeadCore, Aes256Gcm, KeyInit};
 use base64::Engine;
@@ -117,7 +118,7 @@ fn derive_key(salt: &[u8]) -> [u8; 32] {
         .or_else(|_| std::env::var("USERPROFILE"))
         .unwrap_or_default();
     let mut hasher = Sha256::new();
-    hasher.update(b"notedesk-credential-key-v1");
+    hasher.update(b"fosspad-credential-key-v1");
     hasher.update(user.as_bytes());
     hasher.update(home.as_bytes());
     hasher.update(salt);
@@ -125,10 +126,9 @@ fn derive_key(salt: &[u8]) -> [u8; 32] {
 }
 
 fn encrypt_value(plaintext: &str) -> Result<EncryptedCredentials, String> {
-    use rand::RngCore;
     let b64 = base64::engine::general_purpose::STANDARD;
     let mut salt = [0u8; 16];
-    rand::thread_rng().fill_bytes(&mut salt);
+    OsRng.fill_bytes(&mut salt);
     let key_bytes = derive_key(&salt);
     let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes);
     let cipher = Aes256Gcm::new(key);

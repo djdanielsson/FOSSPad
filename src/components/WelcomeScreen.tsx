@@ -11,7 +11,7 @@ export default function WelcomeScreen() {
   const [offerCreate, setOfferCreate] = useState<string | null>(null);
   const [recentPaths] = useState<string[]>(() => {
     try {
-      const stored = localStorage.getItem("notedesk-recent");
+      const stored = localStorage.getItem("fosspad-recent");
       return stored ? JSON.parse(stored) : [];
     } catch { return []; }
   });
@@ -19,7 +19,7 @@ export default function WelcomeScreen() {
   const saveRecent = (resolvedPath: string) => {
     try {
       const recent = [resolvedPath, ...recentPaths.filter(r => r !== resolvedPath)].slice(0, 5);
-      localStorage.setItem("notedesk-recent", JSON.stringify(recent));
+      localStorage.setItem("fosspad-recent", JSON.stringify(recent));
     } catch {}
   };
 
@@ -79,9 +79,9 @@ export default function WelcomeScreen() {
     <div className="welcome-screen">
       <div className="welcome-card">
         <div className="welcome-logo">
-          <img src="/app-icon-112.png" alt="NoteDesk" width="112" height="112" />
+          <img src="/app-icon-112.png" alt="FOSSPad" width="112" height="112" />
         </div>
-        <h1>NoteDesk</h1>
+        <h1>FOSSPad</h1>
         <p className="welcome-subtitle">
           Your notebooks, powered by Markdown.
         </p>

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "==> NoteDesk macOS ARM build"
+echo "==> FOSSPad macOS ARM build"
 echo ""
 
 # Check prerequisites
@@ -35,6 +35,6 @@ if [ -n "$APP" ]; then
   echo "  App: $APP"
   echo ""
   echo "To install, either:"
-  echo "  1. Open the .dmg and drag NoteDesk to Applications"
+  echo "  1. Open the .dmg and drag FOSSPad to Applications"
   echo "  2. Copy the .app directly:  cp -r \"$APP\" /Applications/"
 fi

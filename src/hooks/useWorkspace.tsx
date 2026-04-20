@@ -36,7 +36,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(false);
   const wsPathRef = useRef("");
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!wsPathRef.current) return;

@@ -1,4 +1,4 @@
-# NoteDesk
+# FOSSPad
 
 A lightweight, open-source OneNote alternative built with **Tauri + React**. Your notes are stored as **plain Markdown files** in a folder structure you can commit to Git and sync across systems.
 
@@ -51,15 +51,15 @@ On your Mac, make sure you have the prerequisites, then:
 
 ```bash
 # Clone and enter the project
-cd notedesk
+cd note-desk
 
 # One-command build — produces a .app and .dmg
 ./build-macos.sh
 ```
 
 This outputs:
-- `src-tauri/target/aarch64-apple-darwin/release/bundle/macos/NoteDesk.app` — drag to `/Applications`
-- `src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/NoteDesk_0.1.0_aarch64.dmg` — distributable disk image
+- `src-tauri/target/aarch64-apple-darwin/release/bundle/macos/FOSSPad.app` — drag to `/Applications`
+- `src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/FOSSPad_0.1.0_aarch64.dmg` — distributable disk image
 
 Or build manually:
 

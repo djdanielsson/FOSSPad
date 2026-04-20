@@ -23,7 +23,7 @@ Thumbs.db
 *.swo
 *~
 
-# NoteDesk workspace settings (credentials are encrypted but still excluded)
+# FOSSPad workspace settings (credentials are encrypted but still excluded)
 .notedesk/credentials.json
 
 # Lock files are fine to commit (package-lock.json, Cargo.lock)
