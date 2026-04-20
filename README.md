@@ -1,27 +1,58 @@
-# FOSSPad
+<p align="center">
+  <img src="app-icon.png" alt="FOSSPad" width="128" height="128">
+</p>
 
-A lightweight, open-source OneNote alternative built with **Tauri + React**. Your notes are stored as **plain Markdown files** in a folder structure you can commit to Git and sync across systems.
+<h1 align="center">FOSSPad</h1>
+
+<p align="center">
+  A free, open-source alternative to OneNote — built with Tauri and React.<br>
+  Your notes live as <strong>plain Markdown files</strong> in a folder you own, sync, and version with Git.
+</p>
+
+<p align="center">
+  <a href="https://github.com/anthropics/note-desk/actions"><img src="https://img.shields.io/github/actions/workflow/status/anthropics/note-desk/build.yml?branch=main&style=flat-square" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/anthropics/note-desk?style=flat-square" alt="License"></a>
+  <a href="https://github.com/anthropics/note-desk/releases"><img src="https://img.shields.io/github/v/release/anthropics/note-desk?style=flat-square" alt="Latest Release"></a>
+</p>
+
+---
+
+## Why FOSSPad?
+
+Most note-taking apps lock your content in proprietary databases, require subscriptions, or send your data through third-party servers. FOSSPad takes a different approach:
+
+- **You own your data.** Every page is a `.md` file. Every section is a folder. You can read, edit, and move them with any tool.
+- **No cloud required.** Notes stay on your machine. Sync them however you want — Git, Syncthing, Dropbox, or nothing at all.
+- **Lightweight by design.** Built on Tauri (Rust), not Electron. Expect a small binary and low memory usage.
+- **Cross-platform.** Runs natively on macOS, Linux, and Windows.
 
 ## Features
 
-- **OneNote-style organization** — Notebooks → Sections → Pages, with colored tabs
-- **Markdown-backed storage** — Every page is a `.md` file; every section is a folder; every notebook is a top-level directory
-- **Live WYSIWYG editing** — Click a block to edit raw Markdown; click away to see it rendered. No split-pane needed.
-- **Syntax-highlighted code blocks** — Supports JS/TS, Python, Rust, Go, Java, C, SQL, Bash, and more
-- **Mermaid diagrams** — Write `mermaid` code blocks and see them rendered as diagrams
-- **Images & video embeds** — Inline images, YouTube embeds, and direct video links
-- **GFM support** — Tables, task lists, strikethrough, blockquotes
-- **Auto-save** — Changes save automatically after 1.5 seconds of inactivity
-- **Lightweight** — Built on Tauri (Rust), not Electron. Tiny memory footprint.
-- **Cross-platform** — Runs on Linux, macOS, and Windows
-- **Git-friendly** — The workspace folder is just a directory of Markdown files, ready to be a repo
+- **OneNote-style organization** — Notebooks, Sections, and Pages with colored tabs
+- **Live WYSIWYG editing** — Click a block to edit Markdown; click away to see it rendered
+- **Syntax-highlighted code blocks** — JS/TS, Python, Rust, Go, Java, C, SQL, Bash, and more
+- **Mermaid diagrams** — Write `mermaid` fenced blocks and see them rendered inline
+- **Images and video embeds** — Inline images, YouTube embeds, direct video links
+- **Full GFM support** — Tables, task lists, strikethrough, blockquotes
+- **YAML front-matter tags** — Tag pages and search/filter by tag
+- **Full-text search** — Search across every page in the workspace
+- **Built-in Git integration** — Init, clone, commit, push, and pull from the Settings panel
+- **Encrypted credential storage** — Git tokens are AES-256-GCM encrypted at rest
+- **Auto-save** — Changes persist after 1.5 seconds of inactivity
+- **Customizable themes** — Light, Dark, Solarized, Nord presets, or define your own colors
+- **Markdown import** — Import existing `.md` files into any section
 
 ## Workspace Structure
 
-```
+FOSSPad stores everything as plain files and folders:
+
+```text
 my-notes/                   ← workspace root (you choose this)
+├── .notedesk/              ← app settings & encrypted credentials
+│   ├── settings.json
+│   └── credentials.json
 ├── my-notebook/            ← notebook (folder)
-│   ├── .notebook.json      ← metadata (name, color)
+│   ├── .notebook.json      ← metadata (display name, tab color)
 │   ├── General/            ← section (folder)
 │   │   ├── Welcome.md      ← page (Markdown file)
 │   │   └── Todo.md
@@ -33,74 +64,55 @@ my-notes/                   ← workspace root (you choose this)
         └── 2024-01-15.md
 ```
 
-## Getting Started
+## Installation
 
-### Prerequisites
+Download the latest build for your platform from the [Releases page](https://github.com/anthropics/note-desk/releases), or grab a CI artifact from the [Actions tab](https://github.com/anthropics/note-desk/actions).
 
-- **Node.js** >= 18
-- **Rust** (install via [rustup.rs](https://rustup.rs))
-- **System libraries** for Tauri:
-  - **Linux (Fedora):** `dnf install webkit2gtk4.1-devel openssl-devel gtk3-devel`
-  - **Linux (Ubuntu):** `apt install libwebkit2gtk-4.1-dev libssl-dev libgtk-3-dev`
-  - **macOS:** Xcode Command Line Tools
-  - **Windows:** WebView2 (usually pre-installed on Windows 10+)
+| Platform | Formats |
+| --- | --- |
+| **macOS** (Apple Silicon) | `.dmg`, `.app` |
+| **Linux** (x64, arm64) | `.deb`, `.AppImage` |
+| **Windows** (x64) | `.exe` (NSIS installer), `.msi` |
 
-### Build the macOS App (Apple Silicon)
+> **macOS note:** The app is not signed with an Apple Developer certificate. After installing, you will need to remove the quarantine attribute:
+>
+> ```bash
+> xattr -d com.apple.quarantine /Applications/FOSSPad.app
+> ```
 
-On your Mac, make sure you have the prerequisites, then:
+For detailed setup instructions per platform, see [docs/installation.md](docs/installation.md).
+
+## Quick Start
+
+1. Download and install FOSSPad for your platform (see above).
+2. Launch the app. You'll be prompted to choose or create a workspace folder.
+3. Create your first notebook — pick a name and tab color.
+4. Start writing! Click any block to edit raw Markdown, click away to render.
+
+For more detail, see the [Quick Start guide](docs/quickstart.md).
+
+## Development
 
 ```bash
-# Clone and enter the project
+git clone https://github.com/anthropics/note-desk.git
 cd note-desk
-
-# One-command build — produces a .app and .dmg
-./build-macos.sh
-```
-
-This outputs:
-- `src-tauri/target/aarch64-apple-darwin/release/bundle/macos/FOSSPad.app` — drag to `/Applications`
-- `src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/FOSSPad_0.1.0_aarch64.dmg` — distributable disk image
-
-Or build manually:
-
-```bash
-npm ci
-npx tauri build --target aarch64-apple-darwin
-```
-
-### CI / GitHub Actions
-
-Push to GitHub and a macOS ARM build runs automatically. Download the `.dmg` from the Actions artifacts tab.
-
-### Development
-
-```bash
-# Run in development mode (opens the Tauri window with hot reload)
 npm install
 npm run tauri dev
-
-# Frontend only (opens at http://localhost:1420)
-npm run dev
-
-# Type-check
-npx tsc --noEmit
-
-# Rust check
-cd src-tauri && cargo check
 ```
 
-## Keyboard Shortcuts
+This launches the app in development mode with hot-reload. See [docs/development.md](docs/development.md) for full prerequisites, build commands, and project structure.
 
-| Action | Shortcut |
-|---|---|
-| Save current page | Auto-saves after 1.5s |
-| Escape editing block | `Esc` |
-| Insert tab in code | `Tab` |
+## Contributing
 
-## Importing Existing Markdown
+Contributions are welcome! Please:
 
-Right-click a section → Import, or simply copy `.md` files into the appropriate section folder and restart the app.
+1. Fork the repository and create a feature branch.
+2. Make your changes and ensure `npx tsc --noEmit` passes.
+3. Run `cargo check` in `src-tauri/` to verify the Rust backend.
+4. Submit a pull request with a clear description of what changed and why.
+
+For architecture details and where to find things in the codebase, see [docs/architecture.md](docs/architecture.md).
 
 ## License
 
-MIT
+[MIT](LICENSE) — Copyright (c) 2026 David Danielsson
