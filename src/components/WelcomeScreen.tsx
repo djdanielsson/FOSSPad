@@ -8,6 +8,7 @@ export default function WelcomeScreen() {
   const { setWorkspacePath } = useWorkspace();
   const [path, setPath] = useState("");
   const [error, setError] = useState("");
+  const [offerCreate, setOfferCreate] = useState<string | null>(null);
   const [recentPaths] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem("notedesk-recent");
@@ -15,32 +16,59 @@ export default function WelcomeScreen() {
     } catch { return []; }
   });
 
-  const handleOpen = async (p: string) => {
-    if (!p.trim()) return;
+  const saveRecent = (resolvedPath: string) => {
+    try {
+      const recent = [resolvedPath, ...recentPaths.filter(r => r !== resolvedPath)].slice(0, 5);
+      localStorage.setItem("notedesk-recent", JSON.stringify(recent));
+    } catch {}
+  };
+
+  const openWorkspace = async (resolvedPath: string) => {
+    setError("");
+    setOfferCreate(null);
+    try {
+      await setWorkspacePath(resolvedPath);
+      saveRecent(resolvedPath);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("does not exist")) {
+        setOfferCreate(resolvedPath);
+        setError("");
+      } else {
+        setError(msg);
+      }
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!offerCreate) return;
     setError("");
     try {
+      const ws = await api.createWorkspace(offerCreate);
+      saveRecent(ws.path);
+      await setWorkspacePath(ws.path);
+      setOfferCreate(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleOpen = async (p: string) => {
+    if (!p.trim()) return;
+    try {
       const expanded = await api.expandTilde(p.trim());
-      try {
-        const recent = [expanded, ...recentPaths.filter(r => r !== expanded)].slice(0, 5);
-        localStorage.setItem("notedesk-recent", JSON.stringify(recent));
-      } catch {}
-      setWorkspacePath(expanded);
+      await openWorkspace(expanded);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
   };
 
   const handleBrowse = async () => {
-    setError("");
     try {
       const selected = await open({ directory: true, multiple: false, title: "Choose workspace folder" });
       if (selected && typeof selected === "string") {
         setPath(selected);
-        try {
-          const recent = [selected, ...recentPaths.filter(r => r !== selected)].slice(0, 5);
-          localStorage.setItem("notedesk-recent", JSON.stringify(recent));
-        } catch {}
-        setWorkspacePath(selected);
+        await openWorkspace(selected);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -51,16 +79,7 @@ export default function WelcomeScreen() {
     <div className="welcome-screen">
       <div className="welcome-card">
         <div className="welcome-logo">
-          <svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="8" y="4" width="48" height="56" rx="4" fill="#7B68EE" />
-            <rect x="14" y="10" width="36" height="44" rx="2" fill="#fff" />
-            <line x1="20" y1="22" x2="44" y2="22" stroke="#7B68EE" strokeWidth="1.5" />
-            <line x1="20" y1="30" x2="44" y2="30" stroke="#7B68EE" strokeWidth="1.5" />
-            <line x1="20" y1="38" x2="36" y2="38" stroke="#7B68EE" strokeWidth="1.5" />
-            <rect x="4" y="12" width="6" height="8" rx="1" fill="#5B4ACF" />
-            <rect x="4" y="24" width="6" height="8" rx="1" fill="#9B89FF" />
-            <rect x="4" y="36" width="6" height="8" rx="1" fill="#BDB0FF" />
-          </svg>
+          <img src="/app-icon-112.png" alt="NoteDesk" width="112" height="112" />
         </div>
         <h1>NoteDesk</h1>
         <p className="welcome-subtitle">
@@ -94,6 +113,19 @@ export default function WelcomeScreen() {
             </button>
           </div>
           {error && <p className="welcome-error">{error}</p>}
+          {offerCreate && (
+            <div className="welcome-create-offer">
+              <p>Folder does not exist. Create it?</p>
+              <div className="welcome-create-actions">
+                <button className="btn btn-primary btn-sm" onClick={handleCreate}>
+                  Create &amp; open
+                </button>
+                <button className="btn btn-secondary btn-sm" onClick={() => setOfferCreate(null)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
           <p className="welcome-hint">
             This folder will contain your notebook directories with Markdown files.
             Perfect for committing to a Git repository.

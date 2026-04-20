@@ -20,6 +20,9 @@
 .welcome-logo {
   margin-bottom: 16px;
 }
+.welcome-logo img {
+  border-radius: 20px;
+}
 
 .welcome-card h1 {
   font-size: 28px;
@@ -94,6 +97,23 @@
   color: #d83b01;
   font-size: var(--font-size-sm);
   margin-top: 6px;
+}
+
+.welcome-create-offer {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+}
+.welcome-create-offer p {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.welcome-create-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .welcome-hint {

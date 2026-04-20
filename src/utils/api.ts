@@ -9,6 +9,10 @@ export async function loadWorkspace(workspacePath: string): Promise<Workspace> {
   return invoke("load_workspace", { workspacePath });
 }
 
+export async function createWorkspace(workspacePath: string): Promise<Workspace> {
+  return invoke("create_workspace", { workspacePath });
+}
+
 export async function readPage(
   workspacePath: string,
   notebook: string,

@@ -8,7 +8,7 @@ interface WorkspaceContextType {
   content: string;
   dirty: boolean;
   loading: boolean;
-  setWorkspacePath: (path: string) => void;
+  setWorkspacePath: (path: string) => Promise<void>;
   refresh: () => Promise<void>;
   selectNotebook: (name: string) => void;
   selectSection: (name: string) => void;
@@ -45,15 +45,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setWorkspacePath = useCallback(async (path: string) => {
-    try {
-      const ws = await api.loadWorkspace(path);
-      wsPathRef.current = ws.path;
-      setWorkspace(ws);
-    } catch {
-      wsPathRef.current = path;
-      refresh();
-    }
-  }, [refresh]);
+    const ws = await api.loadWorkspace(path);
+    wsPathRef.current = ws.path;
+    setWorkspace(ws);
+  }, []);
 
   const saveCurrentPage = useCallback(async () => {
     if (!wsPathRef.current || !active.notebook || !active.section || !active.page) return;

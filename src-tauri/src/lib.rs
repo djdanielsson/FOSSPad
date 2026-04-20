@@ -226,11 +226,22 @@ fn expand_tilde(raw: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn create_workspace(workspace_path: String) -> Result<Workspace, String> {
+    let expanded = expand_tilde(workspace_path)?;
+    let root = Path::new(&expanded);
+    fs::create_dir_all(root).map_err(|e| e.to_string())?;
+    load_workspace(expanded)
+}
+
+#[tauri::command]
 fn load_workspace(workspace_path: String) -> Result<Workspace, String> {
     let expanded = expand_tilde(workspace_path)?;
     let root = Path::new(&expanded);
     if !root.exists() {
-        fs::create_dir_all(root).map_err(|e| e.to_string())?;
+        return Err(format!("Directory does not exist: {}", expanded));
+    }
+    if !root.is_dir() {
+        return Err(format!("Path is not a directory: {}", expanded));
     }
 
     let mut notebooks = Vec::new();
@@ -978,6 +989,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             expand_tilde,
+            create_workspace,
             load_workspace,
             read_page,
             save_page,

@@ -182,6 +182,7 @@ export default function App() {
   return (
     <div className="app-layout">
       <header className="app-header">
+        <img src="/app-icon-64.png" alt="" width="24" height="24" className="app-header-icon" />
         <span className="app-header-title">NoteDesk</span>
         <div className="app-header-actions">
           <button
