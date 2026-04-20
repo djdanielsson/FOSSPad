@@ -27,3 +27,9 @@ Thumbs.db
 .notedesk/credentials.json
 
 # Lock files are fine to commit (package-lock.json, Cargo.lock)
+.env
+.env.*
+*.pem
+*.key
+.env.local
+.env.production
