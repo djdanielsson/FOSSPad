@@ -5,31 +5,31 @@ FOSSPad is a desktop application built with [Tauri v2](https://v2.tauri.app/) (R
 ## High-Level Diagram
 
 ```text
-┌─────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────┐
 │                    Tauri Shell                   │
-│  ┌────────────────────┐  ┌────────────────────┐ │
+│  ┌────────────────────┐  ┌─────────────────────┐ │
 │  │   React Frontend   │  │    Rust Backend     │ │
-│  │  (Vite + TS + CSS) │◄─┤  (src-tauri/src/)  │ │
-│  │                     │  │                     │ │
-│  │  App.tsx            │  │  lib.rs             │ │
-│  │  ├─ NotebookTabs    │  │  ├─ Workspace I/O   │ │
-│  │  ├─ SectionTabs     │  │  ├─ CRUD commands   │ │
-│  │  ├─ PageList        │  │  ├─ Search engine   │ │
-│  │  ├─ Editor          │  │  ├─ Tag system      │ │
-│  │  ├─ SearchPanel     │  │  ├─ Git operations  │ │
-│  │  ├─ SettingsPanel   │  │  ├─ Settings I/O    │ │
-│  │  └─ TagEditor       │  │  └─ Credential mgmt │ │
-│  └────────────────────┘  └────────────────────┘ │
+│  │  (Vite + TS + CSS) │◄─┤  (src-tauri/src/)   │ │
+│  │                    │  │                     │ │
+│  │  App.tsx           │  │  lib.rs             │ │
+│  │  ├─ NotebookTabs   │  │  ├─ Workspace I/O   │ │
+│  │  ├─ SectionTabs    │  │  ├─ CRUD commands   │ │
+│  │  ├─ PageList       │  │  ├─ Search engine   │ │
+│  │  ├─ Editor         │  │  ├─ Tag system      │ │
+│  │  ├─ SearchPanel    │  │  ├─ Git operations  │ │
+│  │  ├─ SettingsPanel  │  │  ├─ Settings I/O    │ │
+│  │  └─ TagEditor      │  │  └─ Credential mgmt │ │
+│  └────────────────────┘  └─────────────────────┘ │
 │              ▲                     │             │
 │              │    invoke / IPC     │             │
 │              └─────────────────────┘             │
-└─────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────┘
               │
               ▼
-    ┌──────────────────┐
+    ┌───────────────────┐
     │   Filesystem      │
     │  (Markdown files) │
-    └──────────────────┘
+    └───────────────────┘
 ```
 
 ## Directory Layout
