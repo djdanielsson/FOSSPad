@@ -63,7 +63,7 @@ Return the PR URL to the user when done.
 ### 3. PR description sections
 
 | Section | Purpose |
-|---------|---------|
+| --------- | --------- |
 | **Summary** | What changed and why — 1-3 bullets |
 | **Changes** | Notable implementation details reviewers should know |
 | **Test plan** | How to verify — checkboxes for CI, manual steps, etc. |
@@ -279,7 +279,7 @@ After pushing, reply on any review threads your changes address (see
 Address these proactively to reduce review round-trips:
 
 | Pattern | Fix |
-|---------|-----|
+| --------- | ----- |
 | **Pin GitHub Actions to SHAs** | Use `actions/checkout@SHA # v4` instead of mutable tags |
 | **Inaccurate docs** | Ensure docs describe actual behavior (triggers, branches, etc.) |
 | **Markdown table formatting** | Single leading `\|` per line — double `\|\|` creates empty columns |

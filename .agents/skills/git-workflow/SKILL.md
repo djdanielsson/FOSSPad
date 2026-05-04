@@ -21,7 +21,7 @@ git switch --create <type>/<slug> origin/main
 Use descriptive branch names with a type prefix:
 
 | Prefix | When to use |
-|--------|-------------|
+| -------- | ------------- |
 | `feat/` | New feature |
 | `fix/` | Bug fix |
 | `docs/` | Documentation only |
@@ -52,7 +52,7 @@ Push to your fork remote and target upstream for PRs.
 Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
 format:
 
-```
+```text
 <type>[optional scope]: <description>
 
 [optional body]
@@ -63,7 +63,7 @@ format:
 ### Types
 
 | Type | When to use |
-|------|-------------|
+| ------ | ------------- |
 | `feat` | New feature |
 | `fix` | Bug fix |
 | `docs` | Documentation only |
@@ -83,7 +83,7 @@ Scopes are project-specific. Use them to indicate the area of change (e.g.
 
 ### Examples
 
-```
+```text
 feat(auth): add JWT token refresh endpoint
 
 Implement automatic token refresh when access token expires within 5 minutes.
@@ -92,18 +92,18 @@ Refresh tokens are rotated on each use.
 Closes #42
 ```
 
-```
+```text
 fix(api): handle null response from upstream service
 
 The payments API occasionally returns null instead of an error object.
 Add null check before accessing response fields.
 ```
 
-```
+```text
 docs: update API reference for v2 endpoints
 ```
 
-```
+```text
 build: upgrade Node.js to 22 LTS
 ```
 
@@ -191,7 +191,7 @@ gh pr edit N --head "your-fork:$NEW_BRANCH"
 ### Edge cases
 
 | Situation | Handling |
-|-----------|----------|
+| ----------- | ---------- |
 | Uncommitted changes | Stash before rename, restore after |
 | Not on the branch to rename | Checkout first or specify the branch explicitly |
 | No open PR | Skip PR update step |

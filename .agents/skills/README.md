@@ -3,7 +3,7 @@
 **Read this file at the start of every session.** It tells you which skill files exist and when to use them. Before performing any action listed below, open and read the corresponding `SKILL.md` — do not rely on memory or assumptions.
 
 | Skill | Path | When to read |
-|-------|------|--------------|
+| ------- | ------ | -------------- |
 | **git-workflow** | `git-workflow/SKILL.md` | Before any git commit, branch creation, branch rename, rebase, merge, or push. Covers conventional commit format, branch naming conventions (type prefixes), fork workflows, branch renaming with PR tracking, safe rebasing with `--force-with-lease`, and a pre-commit checklist. |
 | **github-pr** | `github-pr/SKILL.md` | Before creating, updating, or reviewing a pull request, responding to review comments, resolving review threads, or checking CI status. Covers structured PR descriptions (Summary/Changes/Test plan), review feedback workflow, thread resolution via GraphQL, contributor PR review process, and common automated reviewer patterns. |
 
