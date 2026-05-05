@@ -7,6 +7,7 @@ import Editor from "./components/Editor";
 import WelcomeScreen from "./components/WelcomeScreen";
 import SettingsPanel from "./components/SettingsPanel";
 import SearchPanel from "./components/SearchPanel";
+import QuickSwitcher from "./components/QuickSwitcher";
 import * as api from "./utils/api";
 import type { Settings, ThemeSettings } from "./utils/api";
 import type { Workspace } from "./types";
@@ -123,7 +124,19 @@ export default function App() {
   const { workspace, selectNotebook, selectSection, selectPage } = useWorkspace();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "p") {
+        e.preventDefault();
+        setQuickSwitcherOpen(o => !o);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   useEffect(() => {
     if (!workspace?.path) return;
@@ -154,6 +167,26 @@ export default function App() {
     }, ms);
     return () => clearInterval(id);
   }, [workspace?.path, settings?.git.auto_push_enabled, settings?.git.auto_push_interval_minutes]);
+
+  const handleWikiLinkNavigate = useCallback((pageName: string) => {
+    if (!workspace) return;
+    for (const nb of workspace.notebooks) {
+      const folder = slugify(nb.name);
+      for (const sec of nb.sections) {
+        const page = sec.pages.find(p =>
+          p.name.toLowerCase() === pageName.toLowerCase()
+        );
+        if (page) {
+          selectNotebook(nb.name);
+          window.setTimeout(() => {
+            selectSection(sec.name);
+            window.setTimeout(() => selectPage(page), 0);
+          }, 0);
+          return;
+        }
+      }
+    }
+  }, [workspace, selectNotebook, selectSection, selectPage]);
 
   const handleSearchNavigate = useCallback(
     (notebookFolder: string, section: string, filename: string) => {
@@ -213,7 +246,7 @@ export default function App() {
       <SectionTabs />
       <div className="app-body">
         <PageList />
-        <Editor />
+        <Editor onWikiLinkNavigate={handleWikiLinkNavigate} />
       </div>
       {settings && (
         <SettingsPanel
@@ -228,6 +261,12 @@ export default function App() {
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
         workspacePath={workspace.path}
+        onNavigate={handleSearchNavigate}
+      />
+      <QuickSwitcher
+        open={quickSwitcherOpen}
+        onClose={() => setQuickSwitcherOpen(false)}
+        workspace={workspace}
         onNavigate={handleSearchNavigate}
       />
     </div>

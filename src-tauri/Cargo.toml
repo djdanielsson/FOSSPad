@@ -22,6 +22,8 @@ serde_yaml = "0.9"
 aes-gcm = "0.10"
 sha2 = "0.11"
 base64 = "0.22"
+tiny_http = "0.12"
+portpicker = "0.1"
 
 [features]
 default = ["custom-protocol"]

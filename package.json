@@ -10,6 +10,13 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/search": "^6.7.0",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.41.1",
+    "@lezer/markdown": "^1.6.3",
     "@milkdown/core": "^7.7.0",
     "@milkdown/ctx": "^7.7.0",
     "@milkdown/plugin-clipboard": "^7.7.0",
@@ -24,6 +31,7 @@
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-fs": "^2.5.1",
+    "codemirror-live-markdown": "^0.5.1-alpha.1",
     "mermaid": "^11.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

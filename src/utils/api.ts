@@ -217,3 +217,13 @@ export async function loadGitCredentials(
 export async function clearGitCredentials(workspacePath: string): Promise<void> {
   return invoke("clear_git_credentials", { workspacePath });
 }
+
+// Backlinks
+export async function getBacklinks(workspacePath: string, pageName: string): Promise<SearchResult[]> {
+  return invoke("get_backlinks", { workspacePath, pageName });
+}
+
+// Embed server
+export async function getEmbedPort(): Promise<number> {
+  return invoke("get_embed_port");
+}

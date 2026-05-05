@@ -8,6 +8,53 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::OnceLock;
+
+static EMBED_PORT: OnceLock<u16> = OnceLock::new();
+
+fn start_embed_server() -> u16 {
+    let port = portpicker::pick_unused_port().expect("no free port");
+    let addr = format!("127.0.0.1:{port}");
+    let server = tiny_http::Server::http(&addr).expect("failed to start embed server");
+
+    std::thread::spawn(move || {
+        for request in server.incoming_requests() {
+            let url = request.url().to_string();
+            let response = if url.starts_with("/embed?v=") {
+                let video_id = url.strip_prefix("/embed?v=").unwrap_or("");
+                let safe_id: String = video_id
+                    .chars()
+                    .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+                    .take(11)
+                    .collect();
+                let html = format!(
+                    r#"<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>*{{margin:0;padding:0;box-sizing:border-box}}html,body{{width:100%;height:100%;overflow:hidden;background:#000}}iframe{{width:100%;height:100%;border:none}}</style>
+</head><body>
+<iframe src="https://www.youtube-nocookie.com/embed/{safe_id}"
+  allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture;web-share"
+  allowfullscreen></iframe>
+</body></html>"#
+                );
+                tiny_http::Response::from_string(html)
+                    .with_header("Content-Type: text/html; charset=utf-8".parse::<tiny_http::Header>().unwrap())
+                    .with_header("Access-Control-Allow-Origin: *".parse::<tiny_http::Header>().unwrap())
+            } else {
+                tiny_http::Response::from_string("Not Found")
+                    .with_status_code(404)
+            };
+            let _ = request.respond(response);
+        }
+    });
+
+    port
+}
+
+#[tauri::command]
+fn get_embed_port() -> u16 {
+    *EMBED_PORT.get().expect("embed server not started")
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NotebookMeta {
@@ -670,6 +717,36 @@ fn search_by_tag(workspace_path: String, tag: String) -> Result<Vec<TagSearchRes
     Ok(results)
 }
 
+#[tauri::command]
+fn get_backlinks(workspace_path: String, page_name: String) -> Result<Vec<SearchResult>, String> {
+    let root = Path::new(&workspace_path);
+    let mut files = Vec::new();
+    walk_markdown_files(root, &mut files)?;
+
+    let pattern = format!("[[{}]]", page_name);
+    let pattern_lower = pattern.to_lowercase();
+
+    let mut results = Vec::new();
+    for path in files {
+        let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        let (notebook, section, pname, filename) = relative_md_parts(root, &path);
+        for (i, line) in content.lines().enumerate() {
+            if line.to_lowercase().contains(&pattern_lower) {
+                results.push(SearchResult {
+                    notebook: notebook.clone(),
+                    section: section.clone(),
+                    page_name: pname.clone(),
+                    filename: filename.clone(),
+                    line_number: i + 1,
+                    line_content: line.to_string(),
+                });
+            }
+        }
+    }
+
+    Ok(results)
+}
+
 fn git_output_success(workspace: &Path, args: &[&str]) -> Result<String, String> {
     let out = Command::new("git")
         .current_dir(workspace)
@@ -984,6 +1061,9 @@ fn save_settings(workspace_path: String, settings: Settings) -> Result<(), Strin
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let port = start_embed_server();
+    EMBED_PORT.set(port).expect("embed port already set");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
@@ -1016,6 +1096,8 @@ pub fn run() {
             save_git_credentials,
             load_git_credentials,
             clear_git_credentials,
+            get_embed_port,
+            get_backlinks,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

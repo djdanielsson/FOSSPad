@@ -1,10 +1,14 @@
 import { useMemo, useEffect, useRef, useState } from "react";
+import { getEmbedPort } from "../utils/api";
 
 interface Block {
   id: string;
   raw: string;
   type: string;
 }
+
+let cachedEmbedPort: number | null = null;
+const embedPortPromise = getEmbedPort().then(p => { cachedEmbedPort = p; return p; }).catch(() => null);
 
 function escapeHtml(text: string): string {
   return text
@@ -19,6 +23,7 @@ function renderInline(text: string): string {
 
   result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
   result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  result = result.replace(/\[\[([^\]]+)\]\]/g, '<a class="wikilink" data-wikilink="$1">$1</a>');
   result = result.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
   result = result.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   result = result.replace(/\*(.+?)\*/g, "<em>$1</em>");
@@ -26,6 +31,11 @@ function renderInline(text: string): string {
   result = result.replace(/_(.+?)_/g, "<em>$1</em>");
   result = result.replace(/~~(.+?)~~/g, "<del>$1</del>");
   result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  result = result.replace(
+    /(?<!["=])(https?:\/\/[^\s<>&]+)/g,
+    '<a href="$1" target="_blank" rel="noopener">$1</a>'
+  );
 
   return result;
 }
@@ -116,8 +126,44 @@ function renderList(raw: string): string {
 }
 
 function getYouTubeId(url: string): string | null {
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  return match ? match[1] : null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
+    /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    /(?:music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+function YouTubeEmbed({ videoId }: { videoId: string }) {
+  const [port, setPort] = useState<number | null>(cachedEmbedPort);
+
+  useEffect(() => {
+    if (port !== null) return;
+    embedPortPromise.then(p => { if (p) setPort(p); });
+  }, [port]);
+
+  const src = port
+    ? `http://127.0.0.1:${port}/embed?v=${videoId}`
+    : `https://www.youtube-nocookie.com/embed/${videoId}`;
+
+  return (
+    <div className="rendered-block">
+      <div className="video-embed">
+        <iframe
+          src={src}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          title="YouTube video"
+        />
+      </div>
+    </div>
+  );
 }
 
 function MermaidDiagram({ code }: { code: string }) {
@@ -145,7 +191,37 @@ function MermaidDiagram({ code }: { code: string }) {
   );
 }
 
-export default function RenderedBlock({ block }: { block: Block }) {
+function CheckboxList({ lines, onToggle }: { lines: string[]; onToggle: (lineIndex: number) => void }) {
+  const isOrdered = /^\s*\d+\./.test(lines[0]);
+  const Tag = isOrdered ? "ol" : "ul";
+
+  return (
+    <div className="rendered-block">
+      <Tag>
+        {lines.map((line, i) => {
+          const content = line.replace(/^\s*[-*+]\s+/, "").replace(/^\s*\d+\.\s+/, "");
+          const checkMatch = content.match(/^\[([xX ])\]\s*(.*)/);
+          if (checkMatch) {
+            const checked = checkMatch[1].toLowerCase() === "x";
+            return (
+              <li key={i}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => onToggle(i)}
+                />
+                <span dangerouslySetInnerHTML={{ __html: renderInline(checkMatch[2]) }} />
+              </li>
+            );
+          }
+          return <li key={i} dangerouslySetInnerHTML={{ __html: renderInline(content) }} />;
+        })}
+      </Tag>
+    </div>
+  );
+}
+
+export default function RenderedBlock({ block, onToggleCheckbox }: { block: Block; onToggleCheckbox?: (lineIndex: number) => void }) {
   const html = useMemo(() => {
     switch (block.type) {
       case "heading": {
@@ -212,18 +288,7 @@ export default function RenderedBlock({ block }: { block: Block }) {
     const url = block.raw.trim().replace(/^\[video\]\(/, "").replace(/\)$/, "");
     const ytId = getYouTubeId(url);
     if (ytId) {
-      return (
-        <div className="rendered-block">
-          <div className="video-embed">
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${ytId}`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              title="YouTube video"
-            />
-          </div>
-        </div>
-      );
+      return <YouTubeEmbed videoId={ytId} />;
     }
     return (
       <div className="rendered-block">
@@ -232,6 +297,14 @@ export default function RenderedBlock({ block }: { block: Block }) {
         </div>
       </div>
     );
+  }
+
+  if (block.type === "list" && onToggleCheckbox) {
+    const lines = block.raw.split("\n");
+    const hasCheckboxes = lines.some(l => /^\s*[-*+]\s+\[[ xX]\]/.test(l) || /^\s*\d+\.\s+\[[ xX]\]/.test(l));
+    if (hasCheckboxes) {
+      return <CheckboxList lines={lines} onToggle={onToggleCheckbox} />;
+    }
   }
 
   return <div className="rendered-block" dangerouslySetInnerHTML={{ __html: html }} />;
