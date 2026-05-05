@@ -50,6 +50,14 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
           git push origin HEAD:main || true
 
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "FOSSPad ${{ steps.version.outputs.version }}" \
+            --generate-notes
+
   build-macos-arm64:
     needs: prepare
     runs-on: macos-14
@@ -90,22 +98,16 @@ jobs:
       - name: Re-sign app bundle
         run: codesign --force --deep --sign - --entitlements src-tauri/Entitlements.plist "src-tauri/target/aarch64-apple-darwin/release/bundle/macos/FOSSPad.app"
 
-      - name: Upload .dmg
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: FOSSPad-macOS-arm64-dmg
-          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/FOSSPad_*.dmg
-          if-no-files-found: error
-
       - name: Zip .app for release
         run: cd src-tauri/target/aarch64-apple-darwin/release/bundle/macos && zip -r FOSSPad-macOS-arm64.app.zip FOSSPad.app
 
-      - name: Upload .app zip
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: FOSSPad-macOS-arm64-app
-          path: src-tauri/target/aarch64-apple-darwin/release/bundle/macos/FOSSPad-macOS-arm64.app.zip
-          if-no-files-found: error
+      - name: Upload assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.ref_name }}" \
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/FOSSPad_*.dmg \
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/FOSSPad-macOS-arm64.app.zip
 
   build-linux-x64:
     needs: prepare
@@ -143,19 +145,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload .deb
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: FOSSPad-linux-x64-deb
-          path: src-tauri/target/release/bundle/deb/*.deb
-          if-no-files-found: error
-
-      - name: Upload .AppImage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: FOSSPad-linux-x64-appimage
-          path: src-tauri/target/release/bundle/appimage/*.AppImage
-          if-no-files-found: error
+      - name: Upload assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.ref_name }}" \
+            src-tauri/target/release/bundle/deb/*.deb \
+            src-tauri/target/release/bundle/appimage/*.AppImage
 
   build-linux-arm64:
     needs: prepare
@@ -193,19 +189,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload .deb
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: FOSSPad-linux-arm64-deb
-          path: src-tauri/target/release/bundle/deb/*.deb
-          if-no-files-found: error
-
-      - name: Upload .AppImage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: FOSSPad-linux-arm64-appimage
-          path: src-tauri/target/release/bundle/appimage/*.AppImage
-          if-no-files-found: error
+      - name: Upload assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.ref_name }}" \
+            src-tauri/target/release/bundle/deb/*.deb \
+            src-tauri/target/release/bundle/appimage/*.AppImage
 
   build-windows-x64:
     needs: prepare
@@ -240,54 +230,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload NSIS .exe
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: FOSSPad-windows-x64-nsis
-          path: src-tauri/target/release/bundle/nsis/*.exe
-          if-no-files-found: error
-
-      - name: Upload .msi
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: FOSSPad-windows-x64-msi
-          path: src-tauri/target/release/bundle/msi/*.msi
-          if-no-files-found: error
-
-  release:
-    needs:
-      - prepare
-      - build-macos-arm64
-      - build-linux-x64
-      - build-linux-arm64
-      - build-windows-x64
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4
-        with:
-          path: artifacts
-
-      - name: Create GitHub release
+      - name: Upload assets to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
-
-          FILES=""
-          for f in artifacts/FOSSPad-macOS-arm64-dmg/*.dmg; do FILES="$FILES $f"; done
-          for f in artifacts/FOSSPad-macOS-arm64-app/*.zip; do FILES="$FILES $f"; done
-          for f in artifacts/FOSSPad-linux-x64-deb/*.deb; do FILES="$FILES $f"; done
-          for f in artifacts/FOSSPad-linux-x64-appimage/*.AppImage; do FILES="$FILES $f"; done
-          for f in artifacts/FOSSPad-linux-arm64-deb/*.deb; do FILES="$FILES $f"; done
-          for f in artifacts/FOSSPad-linux-arm64-appimage/*.AppImage; do FILES="$FILES $f"; done
-          for f in artifacts/FOSSPad-windows-x64-nsis/*.exe; do FILES="$FILES $f"; done
-          for f in artifacts/FOSSPad-windows-x64-msi/*.msi; do FILES="$FILES $f"; done
-
-          gh release create "$TAG" \
-            --title "FOSSPad $VERSION" \
-            --generate-notes \
-            $FILES
+          gh release upload "${{ github.ref_name }}" `
+            (Get-Item src-tauri/target/release/bundle/nsis/*.exe).FullName `
+            (Get-Item src-tauri/target/release/bundle/msi/*.msi).FullName
