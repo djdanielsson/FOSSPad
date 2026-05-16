@@ -32,7 +32,7 @@
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-fs": "^2.5.1",
     "codemirror-live-markdown": "^0.5.1-alpha.1",
-    "mermaid": "^11.0.0",
+    "mermaid": "^11.15.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
