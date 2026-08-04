@@ -1,6 +1,5 @@
-use aes_gcm::aead::rand_core::RngCore;
-use aes_gcm::aead::{Aead, OsRng};
-use aes_gcm::{AeadCore, Aes256Gcm, KeyInit};
+use aes_gcm::aead::{Aead, Generate, KeyInit};
+use aes_gcm::{Aes256Gcm, Key, Nonce};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value as YamlValue;
@@ -175,11 +174,11 @@ fn derive_key(salt: &[u8]) -> [u8; 32] {
 fn encrypt_value(plaintext: &str) -> Result<EncryptedCredentials, String> {
     let b64 = base64::engine::general_purpose::STANDARD;
     let mut salt = [0u8; 16];
-    OsRng.fill_bytes(&mut salt);
+    getrandom::fill(&mut salt).map_err(|e| format!("rng failed: {e}"))?;
     let key_bytes = derive_key(&salt);
-    let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes);
-    let cipher = Aes256Gcm::new(key);
-    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+    let key = Key::<Aes256Gcm>::from(key_bytes);
+    let cipher = Aes256Gcm::new(&key);
+    let nonce = Nonce::generate();
     let ciphertext = cipher
         .encrypt(&nonce, plaintext.as_bytes())
         .map_err(|e| format!("encryption failed: {e}"))?;
@@ -196,11 +195,12 @@ fn decrypt_value(enc: &EncryptedCredentials) -> Result<String, String> {
     let nonce_bytes = b64.decode(&enc.nonce).map_err(|e| e.to_string())?;
     let ct = b64.decode(&enc.ciphertext).map_err(|e| e.to_string())?;
     let key_bytes = derive_key(&salt);
-    let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes);
-    let cipher = Aes256Gcm::new(key);
-    let nonce = aes_gcm::Nonce::from_slice(&nonce_bytes);
+    let key = Key::<Aes256Gcm>::from(key_bytes);
+    let cipher = Aes256Gcm::new(&key);
+    let nonce = Nonce::try_from(nonce_bytes.as_slice())
+        .map_err(|_| "invalid nonce length".to_string())?;
     let plaintext = cipher
-        .decrypt(nonce, ct.as_ref())
+        .decrypt(&nonce, ct.as_ref())
         .map_err(|e| format!("decryption failed: {e}"))?;
     String::from_utf8(plaintext).map_err(|e| e.to_string())
 }
