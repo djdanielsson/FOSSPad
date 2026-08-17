@@ -25,7 +25,7 @@
     "@milkdown/plugin-prism": "^7.22.0",
     "@milkdown/preset-commonmark": "^7.7.0",
     "@milkdown/preset-gfm": "^7.7.0",
-    "@milkdown/prose": "^7.7.0",
+    "@milkdown/prose": "^7.22.1",
     "@milkdown/react": "^7.21.2",
     "@milkdown/transformer": "^7.22.0",
     "@tauri-apps/api": "^2.11.0",
