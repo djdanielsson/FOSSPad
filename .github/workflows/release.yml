@@ -54,9 +54,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ github.ref_name }}" \
-            --title "FOSSPad ${{ steps.version.outputs.version }}" \
-            --generate-notes
+          # Idempotent: the workflow can be triggered either by pushing a tag
+          # (`git push origin vX.Y.Z`) or by creating a release in the GitHub
+          # UI (which creates the tag AND the release). In the latter case the
+          # release already exists, so skip creation instead of failing with
+          # "Release.tag_name already exists" (HTTP 422).
+          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+            echo "Release ${{ github.ref_name }} already exists, skipping creation."
+          else
+            gh release create "${{ github.ref_name }}" \
+              --title "FOSSPad ${{ steps.version.outputs.version }}" \
+              --generate-notes
+          fi
 
   build-macos-arm64:
     needs: prepare
@@ -64,7 +73,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          ref: ${{ github.ref }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -76,6 +86,20 @@ jobs:
         uses: dtolnay/rust-toolchain@1.95.0
         with:
           targets: aarch64-apple-darwin
+
+      - name: Sync version to release tag
+        shell: bash
+        run: |
+          # Build the tagged commit (not main, which may have moved on) and
+          # apply the same version bump as the prepare job so the binaries
+          # report the release version. Lockfiles are regenerated so that
+          # `npm ci` stays in sync.
+          VERSION="${{ needs.prepare.outputs.version }}"
+          jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
+          jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > tauri.conf.json.tmp && mv tauri.conf.json.tmp src-tauri/tauri.conf.json
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+          npm install --package-lock-only
+          cd src-tauri && cargo generate-lockfile 2>/dev/null || true
 
       - name: Rust cache
         uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
@@ -105,7 +129,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.ref_name }}" \
+          gh release upload "${{ github.ref_name }}" --clobber \
             src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/FOSSPad_*.dmg \
             src-tauri/target/aarch64-apple-darwin/release/bundle/macos/FOSSPad-macOS-arm64.app.zip
 
@@ -115,7 +139,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          ref: ${{ github.ref }}
+          fetch-depth: 0
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -128,6 +153,20 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.95.0
+
+      - name: Sync version to release tag
+        shell: bash
+        run: |
+          # Build the tagged commit (not main, which may have moved on) and
+          # apply the same version bump as the prepare job so the binaries
+          # report the release version. Lockfiles are regenerated so that
+          # `npm ci` stays in sync.
+          VERSION="${{ needs.prepare.outputs.version }}"
+          jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
+          jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > tauri.conf.json.tmp && mv tauri.conf.json.tmp src-tauri/tauri.conf.json
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+          npm install --package-lock-only
+          cd src-tauri && cargo generate-lockfile 2>/dev/null || true
 
       - name: Rust cache
         uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
@@ -149,7 +188,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.ref_name }}" \
+          gh release upload "${{ github.ref_name }}" --clobber \
             src-tauri/target/release/bundle/deb/*.deb \
             src-tauri/target/release/bundle/appimage/*.AppImage
 
@@ -159,7 +198,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          ref: ${{ github.ref }}
+          fetch-depth: 0
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -173,6 +213,20 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.95.0
 
+      - name: Sync version to release tag
+        shell: bash
+        run: |
+          # Build the tagged commit (not main, which may have moved on) and
+          # apply the same version bump as the prepare job so the binaries
+          # report the release version. Lockfiles are regenerated so that
+          # `npm ci` stays in sync.
+          VERSION="${{ needs.prepare.outputs.version }}"
+          jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
+          jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > tauri.conf.json.tmp && mv tauri.conf.json.tmp src-tauri/tauri.conf.json
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+          npm install --package-lock-only
+          cd src-tauri && cargo generate-lockfile 2>/dev/null || true
+
       - name: Rust cache
         uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
@@ -193,7 +247,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.ref_name }}" \
+          gh release upload "${{ github.ref_name }}" --clobber \
             src-tauri/target/release/bundle/deb/*.deb \
             src-tauri/target/release/bundle/appimage/*.AppImage
 
@@ -203,7 +257,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          ref: ${{ github.ref }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -214,6 +269,20 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.95.0
 
+      - name: Sync version to release tag
+        shell: bash
+        run: |
+          # Build the tagged commit (not main, which may have moved on) and
+          # apply the same version bump as the prepare job so the binaries
+          # report the release version. Lockfiles are regenerated so that
+          # `npm ci` stays in sync.
+          VERSION="${{ needs.prepare.outputs.version }}"
+          jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
+          jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > tauri.conf.json.tmp && mv tauri.conf.json.tmp src-tauri/tauri.conf.json
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+          npm install --package-lock-only
+          cd src-tauri && cargo generate-lockfile 2>/dev/null || true
+
       - name: Rust cache
         uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
@@ -234,6 +303,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.ref_name }}" `
+          gh release upload "${{ github.ref_name }}" --clobber `
             (Get-Item src-tauri/target/release/bundle/nsis/*.exe).FullName `
             (Get-Item src-tauri/target/release/bundle/msi/*.msi).FullName
