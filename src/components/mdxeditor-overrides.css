@@ -1,0 +1,121 @@
+/* MDXEditor theme bridge: map FOSSPad design tokens onto the editor's
+   Radix-based variables so the toolbar, dialogs, and popups follow the
+   app theme (including user-customized accents). */
+
+.fosspad-mdx .mdxeditor {
+  --accentBase: var(--bg-secondary);
+  --accentBgSubtle: var(--accent-light);
+  --accentBg: var(--accent-light);
+  --accentBgHover: var(--bg-hover);
+  --accentBgActive: var(--bg-active);
+  --accentLine: var(--border-subtle);
+  --accentBorder: var(--border-color);
+  --accentBorderHover: var(--accent);
+  --accentSolid: var(--accent);
+  --accentSolidHover: var(--accent-hover, var(--accent));
+  --accentText: var(--accent);
+  --accentTextContrast: var(--bg-secondary);
+
+  --baseBase: var(--bg-secondary);
+  --baseBgSubtle: var(--bg-tertiary);
+  --baseBg: var(--bg-secondary);
+  --baseBgHover: var(--bg-hover);
+  --baseBgActive: var(--bg-active);
+  --baseLine: var(--border-subtle);
+  --baseBorder: var(--border-color);
+  --baseBorderHover: var(--text-muted);
+  --baseSolid: var(--text-secondary);
+  --baseSolidHover: var(--text-primary);
+  --baseText: var(--text-secondary);
+  --baseTextContrast: var(--text-primary);
+
+  --basePageBg: transparent;
+
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  background: transparent;
+}
+
+.fosspad-mdx .mdxeditor-toolbar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
+  padding: 4px 8px;
+}
+
+/* Editable content typography (mirrors the previous editor styles). */
+.fosspad-mdx-content {
+  line-height: 1.7;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.fosspad-mdx-content h1 {
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.3;
+  border-bottom: 2px solid var(--border-subtle);
+  padding-bottom: 8px;
+}
+
+.fosspad-mdx-content h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.fosspad-mdx-content h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.fosspad-mdx-content h4,
+.fosspad-mdx-content h5,
+.fosspad-mdx-content h6 {
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.fosspad-mdx-content code {
+  font-family: var(--font-mono);
+  background: var(--bg-tertiary);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.fosspad-mdx-content blockquote {
+  border-left: 4px solid var(--accent);
+  padding: 8px 16px;
+  background: var(--accent-light);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: var(--text-secondary);
+}
+
+.fosspad-mdx-content a {
+  color: var(--accent);
+}
+
+.fosspad-mdx-content table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fosspad-mdx-content th,
+.fosspad-mdx-content td {
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.fosspad-mdx-content th {
+  background: var(--bg-tertiary);
+  font-weight: 600;
+}
+
+.fosspad-mdx-content img {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}

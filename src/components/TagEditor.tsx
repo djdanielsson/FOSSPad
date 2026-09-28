@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import * as api from "../utils/api";
+import { useWorkspace } from "../hooks/useWorkspace";
 import "./TagEditor.css";
 
 export interface TagEditorProps {
@@ -19,6 +20,7 @@ export default function TagEditor({
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [draft, setDraft] = useState("");
+  const { saveCurrentPage, refreshFmPrefix } = useWorkspace();
 
   useEffect(() => {
     let cancelled = false;
@@ -54,12 +56,16 @@ export default function TagEditor({
       const prev = tags;
       setTags(next);
       try {
+        // Flush pending body edits first so they can't later overwrite the
+        // tag change, then refresh the editor's front-matter prefix.
+        await saveCurrentPage();
         await api.setPageTags(workspacePath, notebook, section, filename, next);
+        await refreshFmPrefix();
       } catch {
         setTags(prev);
       }
     },
-    [workspacePath, notebook, section, filename, tags]
+    [workspacePath, notebook, section, filename, tags, saveCurrentPage, refreshFmPrefix]
   );
 
   const handleRemove = (tag: string) => {

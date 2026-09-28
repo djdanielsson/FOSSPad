@@ -29,7 +29,7 @@ Most note-taking apps lock your content in proprietary databases, require subscr
 ## Features
 
 - **OneNote-style organization** — Notebooks, Sections, and Pages with colored tabs
-- **Live WYSIWYG editing** — Click a block to edit Markdown; click away to see it rendered
+- **WYSIWYG Markdown editing** — Rich-text editing with a source-mode toggle; notes stay plain Markdown files
 - **Syntax-highlighted code blocks** — JS/TS, Python, Rust, Go, Java, C, SQL, Bash, and more
 - **Mermaid diagrams** — Write `mermaid` fenced blocks and see them rendered inline
 - **Images and video embeds** — Inline images, YouTube embeds, direct video links

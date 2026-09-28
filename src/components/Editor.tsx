@@ -1,17 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useWorkspace } from "../hooks/useWorkspace";
-import CodeMirrorEditor from "./CodeMirrorEditor";
 import TagEditor from "./TagEditor";
 import * as api from "../utils/api";
 import type { SearchResult } from "../utils/api";
 import "./Editor.css";
+
+const MdxEditor = lazy(() => import("./MdxEditor"));
 
 function slugify(name: string): string {
   return name.split("").map(c => (/[a-zA-Z0-9\-_]/.test(c) ? c : "-")).join("").toLowerCase();
 }
 
 export default function Editor({ onWikiLinkNavigate }: { onWikiLinkNavigate?: (pageName: string) => void }) {
-  const { content, setContent, active, loading, dirty, workspace } = useWorkspace();
+  const { content, setContent, active, loading, dirty, workspace, pageNames } = useWorkspace();
   const [backlinks, setBacklinks] = useState<SearchResult[]>([]);
   const [backlinksOpen, setBacklinksOpen] = useState(true);
 
@@ -76,12 +77,15 @@ export default function Editor({ onWikiLinkNavigate }: { onWikiLinkNavigate?: (p
       </div>
       <div className="editor-scroll">
         <div className="editor-content">
-          <CodeMirrorEditor
-            key={`${active.notebook}-${active.section}-${active.page.filename}`}
-            content={content}
-            onChange={handleChange}
-            onWikiLinkClick={onWikiLinkNavigate}
-          />
+          <Suspense fallback={<div className="editor-loading">Loading editor…</div>}>
+            <MdxEditor
+              key={`${active.notebook}-${active.section}-${active.page.filename}`}
+              content={content}
+              onChange={handleChange}
+              onWikiLinkClick={onWikiLinkNavigate}
+              pageNames={pageNames}
+            />
+          </Suspense>
         </div>
         {backlinks.length > 0 && (
           <div className="backlinks-panel">

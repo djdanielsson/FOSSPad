@@ -48,8 +48,10 @@ note-desk/
 │   │   ├── NotebookTabs.tsx    # Horizontal notebook tab bar with color indicators
 │   │   ├── SectionTabs.tsx     # Section tab bar within a notebook
 │   │   ├── PageList.tsx        # Sidebar page list for the active section
-│   │   ├── Editor.tsx          # Block-based WYSIWYG Markdown editor
-│   │   ├── RenderedBlock.tsx   # Renders a single Markdown block as HTML
+│   │   ├── Editor.tsx          # Editor shell: toolbar, tags, backlinks; hosts MdxEditor
+│   │   ├── MdxEditor.tsx       # MDXEditor (Lexical) WYSIWYG Markdown editor
+│   │   ├── wikilink/           # Custom `[[wiki-link]]` node, transform, plugin + autocomplete
+│   │   ├── embeds/             # Mermaid code-block preview + YouTube bare-URL embeds
 │   │   ├── SearchPanel.tsx     # Full-text search overlay
 │   │   ├── SettingsPanel.tsx   # Theme + Git settings dialog
 │   │   ├── TagEditor.tsx       # YAML front-matter tag editor
@@ -94,13 +96,27 @@ All workspace state flows through `useWorkspace`, a React context defined in `sr
 
 ### Editor
 
-The editor (`src/components/Editor.tsx`) uses a block-based approach:
+The editor (`src/components/Editor.tsx` + `MdxEditor.tsx`) is MDXEditor, a
+Lexical-based WYSIWYG Markdown component with a source-mode toggle:
 
-1. **Parse** — Raw Markdown is split into blocks (headings, paragraphs, code, lists, tables, mermaid, images, etc.) by `parseBlocks()`.
-2. **Render** — Each block is rendered as HTML by `RenderedBlock.tsx`. Code blocks use inline syntax highlighting. Mermaid blocks are rendered as SVG diagrams.
-3. **Edit** — Clicking a rendered block switches it to a `<textarea>` showing raw Markdown. Clicking away (or pressing Escape) commits the edit back.
+1. **Edit** — Rich-text editing with a minimal toolbar (formatting, lists,
+   links, tables, code blocks). A diff/source toggle exposes raw Markdown
+   for power users.
+2. **Wiki-links** — `[[Page Name]]` references are folded into clickable
+   pill nodes by a custom plugin (`wikilink/`): a Lexical `TextNode`
+   subclass plus a node transform, so the on-disk syntax round-trips
+   byte-for-byte and backend backlink search keeps working. Typing `[[`
+   opens page-name autocomplete.
+3. **Embeds** — Bare YouTube URLs on their own line render as video embeds
+   (via the local embed proxy); ` ```mermaid ` fenced blocks render as SVG
+   diagrams with an edit-source toggle. Both serialize back to their
+   original Markdown.
+4. **Front-matter sidecar** — YAML front-matter is stripped before editing
+   and re-attached byte-exact on save. Tags stay managed by `TagEditor`
+   through the backend `get/set_page_tags` commands.
 
-This gives a live WYSIWYG feel without a heavyweight rich-text engine.
+This gives a Notion-like editing feel while keeping notes as plain
+Markdown files.
 
 ### Theming
 

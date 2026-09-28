@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { Workspace, NotebookInfo, SectionInfo, PageInfo, ActiveLocation } from "../types";
 import * as api from "../utils/api";
+import { splitFrontmatter, joinFrontmatter } from "../utils/frontmatter";
 
 interface WorkspaceContextType {
   workspace: Workspace | null;
@@ -8,6 +9,8 @@ interface WorkspaceContextType {
   content: string;
   dirty: boolean;
   loading: boolean;
+  /** Flat list of every page name in the workspace (for wiki-link autocomplete). */
+  pageNames: string[];
   setWorkspacePath: (path: string) => Promise<void>;
   refresh: () => Promise<void>;
   selectNotebook: (name: string) => void;
@@ -15,6 +18,13 @@ interface WorkspaceContextType {
   selectPage: (page: PageInfo) => void;
   setContent: (content: string) => void;
   saveCurrentPage: () => Promise<void>;
+  /**
+   * Re-read the active page from disk and refresh the in-memory
+   * front-matter prefix. Call after out-of-band file writes (e.g. tag
+   * changes) so the next autosave re-attaches fresh front-matter
+   * instead of clobbering it with a stale copy.
+   */
+  refreshFmPrefix: () => Promise<void>;
   addNotebook: (name: string, color: string) => Promise<void>;
   addSection: (name: string) => Promise<void>;
   addPage: (name: string) => Promise<void>;
@@ -36,6 +46,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(false);
   const wsPathRef = useRef("");
+  /** Raw front-matter block of the active page (byte-exact). `content` holds the body only. */
+  const fmPrefixRef = useRef("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const refresh = useCallback(async (): Promise<void> => {
@@ -56,9 +68,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!nbSlug) return;
     const folderName = findNotebookFolder(workspace!, active.notebook);
     if (!folderName) return;
-    await api.savePage(wsPathRef.current, folderName, active.section, active.page.filename, content);
+    await api.savePage(wsPathRef.current, folderName, active.section, active.page.filename, joinFrontmatter(fmPrefixRef.current, content));
     setDirty(false);
   }, [active, content, workspace]);
+
+  const refreshFmPrefix = useCallback(async () => {
+    if (!wsPathRef.current || !active.notebook || !active.section || !active.page || !workspace) return;
+    const folderName = findNotebookFolder(workspace, active.notebook);
+    if (!folderName) return;
+    try {
+      const raw = await api.readPage(wsPathRef.current, folderName, active.section, active.page.filename);
+      fmPrefixRef.current = splitFrontmatter(raw).prefix;
+    } catch {
+      // Keep the previous prefix on read failure.
+    }
+  }, [active, workspace]);
 
   const handleSetContent = useCallback((newContent: string) => {
     setContent(newContent);
@@ -104,14 +128,20 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!active.page || !active.section || !active.notebook || !workspace) {
       setContent("");
+      fmPrefixRef.current = "";
       return;
     }
     const folderName = findNotebookFolder(workspace, active.notebook);
     if (!folderName) return;
     setLoading(true);
     api.readPage(wsPathRef.current, folderName, active.section, active.page.filename)
-      .then(c => { setContent(c); setDirty(false); })
-      .catch(() => setContent(""))
+      .then(c => {
+        const { prefix, body } = splitFrontmatter(c);
+        fmPrefixRef.current = prefix;
+        setContent(body);
+        setDirty(false);
+      })
+      .catch(() => { fmPrefixRef.current = ""; setContent(""); })
       .finally(() => setLoading(false));
   }, [active.page?.filename, active.section, active.notebook, workspace?.path]);
 
@@ -185,6 +215,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const activeNotebook = workspace?.notebooks.find(n => n.name === active.notebook) ?? null;
   const activeSection = activeNotebook?.sections.find(s => s.name === active.section) ?? null;
 
+  const pageNames = useMemo(() => {
+    const names: string[] = [];
+    for (const nb of workspace?.notebooks ?? []) {
+      for (const sec of nb.sections) {
+        for (const page of sec.pages) {
+          names.push(page.name);
+        }
+      }
+    }
+    return names;
+  }, [workspace]);
+
   useEffect(() => {
     if (workspace && workspace.notebooks.length > 0 && !active.notebook) {
       const nb = workspace.notebooks[0];
@@ -196,9 +238,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <WorkspaceContext.Provider value={{
-      workspace, active, content, dirty, loading,
+      workspace, active, content, dirty, loading, pageNames,
       setWorkspacePath, refresh, selectNotebook, selectSection, selectPage,
-      setContent: handleSetContent, saveCurrentPage,
+      setContent: handleSetContent, saveCurrentPage, refreshFmPrefix,
       addNotebook, addSection, addPage, removePage, removeSection, removeNotebook,
       doRenamePage, importFiles, activeNotebook, activeSection,
     }}>
