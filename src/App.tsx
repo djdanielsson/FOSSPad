@@ -59,6 +59,8 @@ function applyTheme(theme: ThemeSettings): void {
 
   if (!hasValues) {
     allVars.forEach(k => root.removeProperty(k));
+    // Default theme is light; publish the signal for themed children (editor).
+    document.documentElement.setAttribute("data-fosspad-theme", "light");
     return;
   }
 
@@ -77,6 +79,7 @@ function applyTheme(theme: ThemeSettings): void {
   }
 
   const isDark = theme.bg_primary ? luminance(theme.bg_primary) < 0.45 : false;
+  document.documentElement.setAttribute("data-fosspad-theme", isDark ? "dark" : "light");
 
   if (theme.bg_primary) {
     if (isDark) {

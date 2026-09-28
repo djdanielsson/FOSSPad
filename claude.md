@@ -41,7 +41,7 @@ docs/                         Documentation (architecture, quickstart, installat
 
 - **All backend logic is in `src-tauri/src/lib.rs`** — workspace loading, CRUD, search, tags, Git, settings, encrypted credentials. There is no module splitting.
 - **Frontend state is centralized** in `useWorkspace` (React context). Components consume it via `useWorkspace()` hook.
-- **The editor is block-based** — `parseBlocks()` splits Markdown into typed blocks; `RenderedBlock` renders each one; clicking a block opens a textarea for raw editing.
+- **The editor is MDXEditor (Lexical WYSIWYG)** — `MdxEditor.tsx` hosts it with a source-mode toggle. `[[wiki-links]]` are a custom Lexical node (`wikilink/`) that round-trips byte-for-byte; front-matter is a sidecar stripped before editing and re-attached on save.
 - **Theming** works by setting CSS custom properties on the document root, with derived colors computed in JS.
 - **Git integration** shells out to the `git` CLI from Rust. Credentials are AES-256-GCM encrypted with a key derived from the user's environment.
 - **No database** — the workspace IS the filesystem. Notebooks are folders, sections are subfolders, pages are `.md` files.
