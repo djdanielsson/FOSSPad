@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@lexical/react": "0.53.0",
-    "@mdxeditor/editor": "^4.3.3",
+    "@mdxeditor/editor": "^4.3.4",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-dialog": "^2.8.4",
     "@tauri-apps/plugin-fs": "^2.7.1",
