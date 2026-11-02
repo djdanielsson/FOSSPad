@@ -27,7 +27,7 @@ jobs:
           cache: npm
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.95.0
+        uses: dtolnay/rust-toolchain@1.120.0
         with:
           targets: aarch64-apple-darwin
 
@@ -64,7 +64,7 @@ jobs:
           cache: npm
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.95.0
+        uses: dtolnay/rust-toolchain@1.120.0
 
       - name: Rust cache
         uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
@@ -97,7 +97,7 @@ jobs:
           cache: npm
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.95.0
+        uses: dtolnay/rust-toolchain@1.120.0
 
       - name: Rust cache
         uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
@@ -127,7 +127,7 @@ jobs:
           cache: npm
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.95.0
+        uses: dtolnay/rust-toolchain@1.120.0
 
       - name: Rust cache
         uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
