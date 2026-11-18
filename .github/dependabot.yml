@@ -4,6 +4,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # @mdxeditor/editor still pins lexical ^0.48 and nests its own copy, so
+      # 0.53 produces two LexicalNode classes and the TS build fails on the
+      # branded field. Drop this entry once mdxeditor accepts a newer lexical.
+      - dependency-name: "lexical"
   - package-ecosystem: "cargo"
     directory: "/src-tauri"
     schedule:
